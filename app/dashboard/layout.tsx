@@ -1,5 +1,5 @@
-import { DashboardNav } from './dashboard-nav';
-import { ProtectedRoute } from '@/components/protected-route';
+import DashboardNav from "@/components/dashboard-nav";
+import ProtectedRoute from "@/components/protected-route";
 
 export default function DashboardLayout({
   children,
@@ -17,7 +17,9 @@ export default function DashboardLayout({
           {/* Header */}
           <header className="border-b border-border bg-card h-16 flex items-center px-6">
             <div className="flex items-center justify-between w-full">
-              <h1 className="text-xl font-semibold text-foreground">RachamHub</h1>
+              <h1 className="text-xl font-semibold text-foreground">
+                RachamHub
+              </h1>
             </div>
           </header>
 

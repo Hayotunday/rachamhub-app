@@ -9,6 +9,7 @@ RachamHub is a complete, production-ready logistics management system for Lagos-
 ✅ **Complete** - All core infrastructure is implemented and tested
 
 ### 1. Authentication System
+
 - Firebase Authentication with email/password login
 - Secure session management
 - Auth context provider for global state
@@ -16,11 +17,13 @@ RachamHub is a complete, production-ready logistics management system for Lagos-
 - Automatic login/logout handling
 
 **Files:**
+
 - `lib/auth-context.tsx` - Auth provider & hooks
 - `app/login/` - Login page & form
 - `components/protected-route.tsx` - Route protection wrapper
 
 ### 2. Database Structure
+
 - Firestore configured for real-time updates
 - Users collection with role information
 - Orders collection for logistics operations
@@ -28,28 +31,32 @@ RachamHub is a complete, production-ready logistics management system for Lagos-
 - Type-safe TypeScript interfaces
 
 **Files:**
+
 - `lib/firebase.ts` - Firebase initialization
 - `lib/types.ts` - TypeScript definitions
 
 ### 3. Role-Based Access Control
+
 Seven distinct roles with customized dashboards:
 
-| Role | Dashboard | Features |
-|------|-----------|----------|
+| Role                 | Dashboard                     | Features                         |
+| -------------------- | ----------------------------- | -------------------------------- |
 | **Customer Service** | `/dashboard/customer_service` | Orders, AI extraction, inquiries |
-| **Warehouse** | `/dashboard/warehouse` | Inventory, stock tracking |
-| **FOM Level 1** | `/dashboard/fom1` | Order fulfillment |
-| **FOM Level 2** | `/dashboard/fom2` | Order fulfillment |
-| **FOM Level 3** | `/dashboard/fom3` | Order fulfillment |
-| **Accounting** | `/dashboard/accounting` | Invoices, payments |
-| **Admin** | `/dashboard/admin` | User management, system settings |
+| **Warehouse**        | `/dashboard/warehouse`        | Inventory, stock tracking        |
+| **FOM Level 1**      | `/dashboard/fom`              | Order fulfillment                |
+| **FOM Level 2**      | `/dashboard/fom`              | Order fulfillment                |
+| **FOM Level 3**      | `/dashboard/fom`              | Order fulfillment                |
+| **Accounting**       | `/dashboard/accounting`       | Invoices, payments               |
+| **Admin**            | `/dashboard/admin`            | User management, system settings |
 
 **Files:**
+
 - `app/dashboard/layout.tsx` - Dashboard layout
 - `app/dashboard/dashboard-nav.tsx` - Role-based navigation
 - `app/dashboard/[role]/page.tsx` - Role dashboards
 
 ### 4. AI Order Extraction (Google Gemini)
+
 Complete integration for extracting order details from text:
 
 - **API Endpoint:** `app/api/gemini/extract-order/route.ts`
@@ -61,6 +68,7 @@ Complete integration for extracting order details from text:
   - Type-safe response handling
 
 **How it works:**
+
 1. Customer Service rep inputs order text
 2. Google Gemini 2.5 Flash analyzes the text
 3. AI extracts: customer name, items, quantities, total
@@ -68,6 +76,7 @@ Complete integration for extracting order details from text:
 5. Save to Firestore with one click
 
 ### 5. User Interface
+
 - Mobile-first responsive design
 - Lagos theme: Green (#1B7A3E), Yellow (#FCD34D), Black (#1F2937)
 - shadcn/ui components for consistency
@@ -75,6 +84,7 @@ Complete integration for extracting order details from text:
 - Lucide icons throughout
 
 **Files:**
+
 - `app/globals.css` - Global styles & theme tokens
 - `app/layout.tsx` - Root layout with providers
 - `components/ui/` - shadcn components (pre-installed)
@@ -140,9 +150,11 @@ GOOGLE_GEMINI_API_KEY=
 ## Getting Started
 
 ### Quick Setup (5 minutes)
+
 See [QUICKSTART.md](./QUICKSTART.md)
 
 ### Detailed Setup (15 minutes)
+
 See [SETUP_GUIDE.md](./SETUP_GUIDE.md)
 
 ### Development
@@ -164,35 +176,41 @@ pnpm start
 ## Key Features Implemented
 
 ### Authentication ✅
+
 - Firebase email/password login
 - Session persistence
 - Automatic logout on auth errors
 - User profile fetching from Firestore
 
 ### Authorization ✅
+
 - Role-based access control
 - Protected routes
 - Role-specific dashboards
 - Role-based navigation menus
 
 ### Real-Time Features ✅
+
 - Firestore listeners (ready to implement)
 - Custom React hooks for data fetching
 - Automatic offline support via Firestore
 
 ### AI Features ✅
+
 - Google Gemini 2.5 Flash integration
 - Order extraction from text
 - JSON parsing and validation
 - Type-safe responses
 
 ### UI/UX ✅
+
 - Responsive mobile-first design
 - Lagos-inspired color scheme
 - Clean, professional interface
 - Accessible components (ARIA labels, semantic HTML)
 
 ### Security ✅
+
 - Environment variables for sensitive data
 - Type-safe TypeScript
 - Firebase security rules (template provided)
@@ -201,6 +219,7 @@ pnpm start
 ## What's Ready to Use
 
 ### Pages
+
 - ✅ Login page with authentication
 - ✅ Dashboard routers
 - ✅ 7 role-specific dashboards
@@ -208,6 +227,7 @@ pnpm start
 - ✅ Placeholder pages for all role features
 
 ### Components
+
 - ✅ Login form with validation
 - ✅ Dashboard navigation sidebar
 - ✅ Protected route wrapper
@@ -215,11 +235,13 @@ pnpm start
 - ✅ Card/Stats components
 
 ### APIs
+
 - ✅ Gemini order extraction endpoint
 - ✅ Error handling
 - ✅ Validation
 
 ### Documentation
+
 - ✅ README.md - Full documentation
 - ✅ QUICKSTART.md - 5-minute setup
 - ✅ SETUP_GUIDE.md - Detailed guide
@@ -228,6 +250,7 @@ pnpm start
 ## What to Do Next
 
 ### Phase 1: Setup (Required Before Use)
+
 1. Get Firebase credentials
 2. Get Gemini API key
 3. Configure `.env.local`
@@ -235,6 +258,7 @@ pnpm start
 5. Start development server
 
 ### Phase 2: Expand Functionality (After Setup)
+
 1. Implement orders list pages
 2. Add Firestore real-time listeners
 3. Create inventory management UI
@@ -242,6 +266,7 @@ pnpm start
 5. Implement user management
 
 ### Phase 3: Production (Before Deployment)
+
 1. Configure Firestore security rules
 2. Set up error tracking (Sentry, etc.)
 3. Add logging
@@ -251,11 +276,13 @@ pnpm start
 ## File Manifest
 
 ### Core Files
+
 - `lib/firebase.ts` - Firebase initialization (88 lines)
 - `lib/auth-context.tsx` - Auth provider (220 lines)
 - `lib/types.ts` - TypeScript types (76 lines)
 
 ### Pages
+
 - `app/login/page.tsx` - Login page (38 lines)
 - `app/login/login-form.tsx` - Login form (119 lines)
 - `app/dashboard/page.tsx` - Dashboard router (36 lines)
@@ -263,23 +290,28 @@ pnpm start
 - `app/dashboard/dashboard-nav.tsx` - Navigation (178 lines)
 
 ### Dashboards (Main)
+
 - `app/dashboard/customer_service/page.tsx` - CS dashboard (104 lines)
 - `app/dashboard/warehouse/page.tsx` - Warehouse dashboard (104 lines)
-- `app/dashboard/fom1/page.tsx` - FOM dashboard (109 lines)
+- `app/dashboard/fom/page.tsx` - FOM dashboard (109 lines)
 - `app/dashboard/accounting/page.tsx` - Accounting dashboard (104 lines)
 - `app/dashboard/admin/page.tsx` - Admin dashboard (116 lines)
 
 ### Feature Pages
+
 - `app/dashboard/customer_service/extract/page.tsx` - Extraction page (17 lines)
 - `app/dashboard/customer_service/extract/order-extraction-form.tsx` - Form (305 lines)
 
 ### API
+
 - `app/api/gemini/extract-order/route.ts` - Gemini API (128 lines)
 
 ### Components
+
 - `components/protected-route.tsx` - Route protection (71 lines)
 
 ### Configuration & Documentation
+
 - `next.config.mjs` - Next.js config
 - `app/globals.css` - Global styles with theme
 - `app/layout.tsx` - Root layout
@@ -294,6 +326,7 @@ pnpm start
 ## Design System
 
 ### Colors (Lagos Theme)
+
 - **Primary Green:** oklch(0.38 0.15 142) - #1B7A3E
 - **Secondary Yellow:** oklch(0.85 0.2 85) - #FCD34D
 - **Black:** oklch(0.145 0 0) - #1F2937
@@ -301,17 +334,20 @@ pnpm start
 - **Neutral Grays:** oklch(0.95-0.35 0 0)
 
 ### Typography
+
 - **Sans Serif:** Geist (from next/font/google)
 - **Monospace:** Geist Mono
 - **Body:** 16px / 1.5 line-height
 - **Headings:** Bold, 24-48px
 
 ### Spacing
+
 - **Base Unit:** 4px (Tailwind scale)
 - **Common:** p-4, p-6, gap-4, gap-6
 - **Grid:** grid-cols-1, md:grid-cols-2, lg:grid-cols-4
 
 ### Components
+
 - Buttons (primary, outline, ghost)
 - Cards with shadows
 - Inputs with labels
@@ -323,11 +359,13 @@ pnpm start
 ## Security Considerations
 
 ✅ **Implemented**
+
 - Environment variables for secrets
 - Firebase authentication
 - Type-safe code
 
 ⚠️ **Should Configure**
+
 - Firestore security rules
 - CORS settings
 - Rate limiting
@@ -351,12 +389,14 @@ pnpm start
 ## Testing & Debugging
 
 ### Tips
+
 1. Check browser console for errors
 2. Use [Firebase Console](https://console.firebase.google.com) to verify data
 3. Check `.env.local` for missing variables
 4. Verify Firestore has users and orders collections
 
 ### Debug Statements
+
 - Look for `console.log("[v0] ...")` in code
 - Check network tab for API responses
 
@@ -371,21 +411,22 @@ pnpm start
 
 ## Project Statistics
 
-| Metric | Value |
-|--------|-------|
-| **Framework** | Next.js 15 |
-| **Language** | TypeScript 100% |
-| **Total Files** | 50+ |
-| **Code Lines** | 2,300+ |
-| **Pages/Routes** | 23 |
-| **Roles** | 7 |
-| **Components** | 50+ |
-| **API Routes** | 1 (extensible) |
-| **Database Collections** | 2 (extensible) |
+| Metric                   | Value           |
+| ------------------------ | --------------- |
+| **Framework**            | Next.js 15      |
+| **Language**             | TypeScript 100% |
+| **Total Files**          | 50+             |
+| **Code Lines**           | 2,300+          |
+| **Pages/Routes**         | 23              |
+| **Roles**                | 7               |
+| **Components**           | 50+             |
+| **API Routes**           | 1 (extensible)  |
+| **Database Collections** | 2 (extensible)  |
 
 ## Production Deployment
 
 The application is ready to deploy to:
+
 - **Vercel** (recommended - native Next.js support)
 - **AWS** (EC2, ECS, Lambda)
 - **Google Cloud** (Cloud Run, App Engine)
@@ -397,12 +438,14 @@ See deployment sections in README.md
 ## Maintenance Notes
 
 ### Regular Tasks
+
 - Monitor Firestore usage
 - Check API quota (Gemini)
 - Review error logs
 - Update dependencies monthly
 
 ### Scalability
+
 - Add caching layer (Redis) for performance
 - Implement pagination for large datasets
 - Monitor Firestore read/write limits
@@ -430,7 +473,7 @@ RachamHub is a **complete, production-ready logistics management system** with:
 ✅ Professional UI with Lagos theme  
 ✅ Type-safe TypeScript codebase  
 ✅ Comprehensive documentation  
-✅ Ready to deploy  
+✅ Ready to deploy
 
 **Next Step:** Follow [QUICKSTART.md](./QUICKSTART.md) to get it running in 5 minutes!
 

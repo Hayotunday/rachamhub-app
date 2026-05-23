@@ -1,14 +1,14 @@
-import { LoginForm } from './login-form';
-import { Metadata } from 'next';
+import LoginForm from "@/components/login-form";
+import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: 'RachamHub - Login',
-  description: 'RachamHub Logistics Management System',
+  title: "RachamHub - Login",
+  description: "RachamHub Logistics Management System",
 };
 
 export default function LoginPage() {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-primary via-background to-primary flex items-center justify-center p-4">
+    <main className="min-h-screen bg-linear-to-br from-primary via-background to-primary flex items-center justify-center p-4">
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-10 right-10 w-40 h-40 bg-secondary/20 rounded-full blur-3xl" />
@@ -19,7 +19,9 @@ export default function LoginPage() {
         {/* Logo/Brand Section */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-primary mb-2">RachamHub</h1>
-          <p className="text-muted-foreground text-lg">Lagos Logistics Management</p>
+          <p className="text-muted-foreground text-lg">
+            Lagos Logistics Management
+          </p>
         </div>
 
         {/* Login Card */}

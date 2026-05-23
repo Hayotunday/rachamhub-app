@@ -1,16 +1,17 @@
-import { initializeApp, getApps } from 'firebase/app';
+import { initializeApp, getApps } from "firebase/app";
 import {
   getAuth,
-  connectAuthEmulator,
   setPersistence,
   browserLocalPersistence,
-} from 'firebase/auth';
+} from "firebase/auth";
 import {
   getFirestore,
-  connectFirestoreEmulator,
-  enableIndexedDbPersistence,
-} from 'firebase/firestore';
-import { getStorage, connectStorageEmulator } from 'firebase/storage';
+  initializeFirestore,
+  persistentLocalCache,
+  persistentSingleTabManager,
+  Firestore,
+} from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 
 // Firebase configuration from environment variables
 const firebaseConfig = {
@@ -23,25 +24,26 @@ const firebaseConfig = {
 };
 
 // Validate required config values
-const requiredKeys = ['apiKey', 'authDomain', 'projectId'] as const;
-const missingKeys = requiredKeys.filter(
-  key => !firebaseConfig[key]
-);
+const requiredKeys = ["apiKey", "authDomain", "projectId"] as const;
+const missingKeys = requiredKeys.filter((key) => !firebaseConfig[key]);
 
 if (missingKeys.length > 0) {
   console.warn(
-    `[Firebase] Missing environment variables: ${missingKeys.join(', ')}. ` +
-    `Please set NEXT_PUBLIC_FIREBASE_* variables in your .env.local file.`
+    `[Firebase] Missing environment variables: ${missingKeys.join(", ")}. ` +
+      `Please set NEXT_PUBLIC_FIREBASE_* variables in your .env.local file.`,
   );
 }
 
 // Only initialize Firebase if we have required config (client-side only)
 let app: ReturnType<typeof initializeApp> | null = null;
 let auth: ReturnType<typeof getAuth> | null = null;
-let db: ReturnType<typeof getFirestore> | null = null;
+let db: Firestore | null = null;
 let storage: ReturnType<typeof getStorage> | null = null;
 
-if (typeof window !== 'undefined' && requiredKeys.every(key => firebaseConfig[key])) {
+if (
+  typeof window !== "undefined" &&
+  requiredKeys.every((key) => firebaseConfig[key])
+) {
   try {
     // Initialize Firebase (only once)
     app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
@@ -50,45 +52,35 @@ if (typeof window !== 'undefined' && requiredKeys.every(key => firebaseConfig[ke
     auth = getAuth(app);
 
     // Set persistence for web
-    setPersistence(auth, browserLocalPersistence).catch(err => {
-      console.warn('[Firebase Auth] Failed to set persistence:', err);
+    setPersistence(auth, browserLocalPersistence).catch((err) => {
+      console.warn("[Firebase Auth] Failed to set persistence:", err);
     });
 
-    // Initialize Firestore
-    db = getFirestore(app);
-
-    // Enable offline persistence for Firestore
-    enableIndexedDbPersistence(db).catch(err => {
-      if (err.code === 'failed-precondition') {
-        console.warn('[Firestore] Multiple tabs open, persistence disabled');
-      } else if (err.code === 'unimplemented') {
-        console.warn('[Firestore] Browser does not support persistence');
-      } else {
-        console.warn('[Firestore] Persistence error:', err);
-      }
-    });
+    // Initialize Firestore with modern persistent cache configuration
+    try {
+      db = initializeFirestore(app, {
+        localCache: persistentLocalCache({
+          tabManager: persistentSingleTabManager({}),
+        }),
+      });
+      console.log("[Firestore] Initialized");
+    } catch (err) {
+      console.error("[Firestore] Failed to initialize:", err);
+      db = null;
+    }
 
     // Initialize Storage
     storage = getStorage(app);
-
-    // Optional: Connect to emulators in development
-    if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true') {
-      try {
-        if (!auth.emulatorConfig) {
-          connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
-        }
-        if (!db.isShutdown && !process.env.NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST) {
-          connectFirestoreEmulator(db, 'localhost', 8080);
-        }
-        if (!process.env.NEXT_PUBLIC_STORAGE_EMULATOR_HOST) {
-          connectStorageEmulator(storage, 'localhost', 9199);
-        }
-      } catch (error) {
-        console.warn('[Firebase Emulator] Could not connect:', error);
-      }
-    }
+    console.log(
+      "[Firebase] Init status - Auth:",
+      !!auth,
+      "Firestore:",
+      !!db,
+      "Storage:",
+      !!storage,
+    );
   } catch (error) {
-    console.warn('[Firebase] Initialization error:', error);
+    console.error("[Firebase] Initialization error:", error);
   }
 }
 

@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useAuth } from '@/lib/auth-context';
-import { Button } from '@/components/ui/button';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { useAuth } from "@/lib/auth-context";
+import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   LogOut,
   Package,
@@ -13,15 +13,16 @@ import {
   Settings,
   MessageSquare,
   Zap,
-} from 'lucide-react';
-import { ROLE_LABELS } from '@/lib/types';
-import { useState } from 'react';
+  Home,
+} from "lucide-react";
+import { ROLE_LABELS } from "@/lib/types";
+import { useState } from "react";
 
 /**
  * Role-based sidebar navigation
  * Shows different menu items based on user role
  */
-export function DashboardNav() {
+export default function DashboardNav() {
   const { user, signOut } = useAuth();
   const router = useRouter();
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -32,9 +33,9 @@ export function DashboardNav() {
     try {
       setIsSigningOut(true);
       await signOut();
-      router.push('/login');
+      router.push("/login");
     } catch (error) {
-      console.error('[Dashboard Nav] Sign out error:', error);
+      console.error("[Dashboard Nav] Sign out error:", error);
       setIsSigningOut(false);
     }
   };
@@ -43,7 +44,7 @@ export function DashboardNav() {
   const getMenuItems = () => {
     const baseItems = [
       {
-        label: 'Orders',
+        label: "Orders",
         href: `/dashboard/${user.role}/orders`,
         icon: Package,
       },
@@ -52,67 +53,70 @@ export function DashboardNav() {
     const roleMenus: Record<string, typeof baseItems> = {
       customer_service: [
         {
-          label: 'Orders',
-          href: `/dashboard/${user.role}/orders`,
-          icon: Package,
+          label: "Home",
+          href: `/dashboard/${user.role}/`,
+          icon: Home,
         },
         {
-          label: 'Order Extraction',
-          href: `/dashboard/${user.role}/extract`,
+          label: "Create Order",
+          href: `/dashboard/${user.role}/create-order`,
           icon: Zap,
         },
         {
-          label: 'Customer Inquiries',
-          href: `/dashboard/${user.role}/inquiries`,
-          icon: MessageSquare,
+          label: "Orders",
+          href: `/dashboard/${user.role}/orders`,
+          icon: Package,
         },
+        // {
+        //   label: "Customer Inquiries",
+        //   href: `/dashboard/${user.role}/inquiries`,
+        //   icon: MessageSquare,
+        // },
       ],
       warehouse: [
         {
-          label: 'Inventory',
+          label: "Inventory",
           href: `/dashboard/${user.role}/inventory`,
           icon: Warehouse,
         },
         {
-          label: 'Orders',
+          label: "Orders",
           href: `/dashboard/${user.role}/orders`,
           icon: Package,
         },
       ],
-      fom1: baseItems,
-      fom2: baseItems,
-      fom3: baseItems,
       accounting: [
         {
-          label: 'Invoices',
+          label: "Invoices",
           href: `/dashboard/${user.role}/invoices`,
           icon: DollarSign,
         },
         {
-          label: 'Payments',
+          label: "Payments",
           href: `/dashboard/${user.role}/payments`,
           icon: DollarSign,
         },
       ],
       admin: [
         {
-          label: 'Dashboard',
+          label: "Dashboard",
           href: `/dashboard/${user.role}/overview`,
           icon: Package,
         },
         {
-          label: 'Users',
+          label: "Users",
           href: `/dashboard/${user.role}/users`,
           icon: Users,
         },
         {
-          label: 'Settings',
+          label: "Settings",
           href: `/dashboard/${user.role}/settings`,
           icon: Settings,
         },
       ],
     };
 
+    // If role has a specific menu, return it, otherwise fall back to baseItems
     return roleMenus[user.role] || baseItems;
   };
 
@@ -124,7 +128,9 @@ export function DashboardNav() {
       <div className="border-b border-sidebar-border p-6">
         <Link href="/dashboard" className="flex items-center gap-2">
           <div className="w-10 h-10 rounded-lg bg-sidebar-primary flex items-center justify-center">
-            <span className="text-sidebar-primary-foreground font-bold text-lg">R</span>
+            <span className="text-sidebar-primary-foreground font-bold text-lg">
+              R
+            </span>
           </div>
           <div className="flex-1">
             <h2 className="font-bold text-sidebar-foreground">RachamHub</h2>
@@ -138,13 +144,17 @@ export function DashboardNav() {
         <p className="text-xs text-sidebar-foreground/60 uppercase tracking-wide">
           {ROLE_LABELS[user.role]}
         </p>
-        <p className="text-sm font-medium text-sidebar-foreground truncate">{user.displayName}</p>
-        <p className="text-xs text-sidebar-foreground/60 truncate">{user.email}</p>
+        <p className="text-sm font-medium text-sidebar-foreground truncate">
+          {user.displayName}
+        </p>
+        <p className="text-xs text-sidebar-foreground/60 truncate">
+          {user.email}
+        </p>
       </div>
 
       {/* Navigation Menu */}
       <nav className="flex-1 overflow-y-auto p-4 space-y-2">
-        {menuItems.map(item => {
+        {menuItems.map((item) => {
           const Icon = item.icon;
           return (
             <Link key={item.href} href={item.href}>
@@ -164,12 +174,12 @@ export function DashboardNav() {
       <div className="border-t border-sidebar-border p-4 space-y-2">
         <Button
           variant="outline"
-          className="w-full justify-start gap-3 border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          className="w-full justify-start gap-3 border-sidebar-border"
           onClick={handleSignOut}
           disabled={isSigningOut}
         >
           <LogOut className="h-5 w-5" />
-          <span>{isSigningOut ? 'Signing Out...' : 'Sign Out'}</span>
+          <span>{isSigningOut ? "Signing Out..." : "Sign Out"}</span>
         </Button>
       </div>
     </aside>

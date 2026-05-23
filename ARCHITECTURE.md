@@ -4,21 +4,21 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                     RachamHub Application                        │
-│                     (Next.js 15 App Router)                      │
+│                     RachamHub Application                       │
+│                     (Next.js 15 App Router)                     │
 └─────────────────────────────────────────────────────────────────┘
                               │
                  ┌────────────┼────────────┐
                  │            │            │
             ┌────▼─────┐ ┌────▼─────┐ ┌───▼──────┐
-            │  Firebase │ │  Google  │ │ External │
-            │   Auth    │ │ Gemini   │ │   APIs   │
+            │  Firebase│ │  Google  │ │ External │
+            │   Auth   │ │  Gemini  │ │   APIs   │
             └──────────┘ └──────────┘ └──────────┘
                  │            │
-            ┌────▼─────┐ ┌────▼─────┐
-            │ Firestore │ │ AI Model  │
-            │ (Database)│ │           │
-            └───────────┘ └───────────┘
+            ┌────▼─────┐ ┌────▼──────┐
+            │Firestore │ │ AI Model  │
+            │(Database)│ │           │
+            └──────────┘ └───────────┘
 ```
 
 ## Application Layers
@@ -27,38 +27,38 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Pages & Components                        │
+│                    Pages & Components                       │
 ├─────────────────────────────────────────────────────────────┤
-│                                                               │
+│                                                             │
 │  ┌──────────────────────────────────────────────────────┐   │
 │  │              Login Page                              │   │
-│  │  • Email/Password form                              │   │
-│  │  • Firebase authentication                          │   │
-│  │  • Error handling                                   │   │
+│  │  • Email/Password form                               │   │
+│  │  • Firebase authentication                           │   │
+│  │  • Error handling                                    │   │
 │  └──────────────────────────────────────────────────────┘   │
-│                          │                                    │
-│                    Authenticated?                             │
-│                     /  ✓ \ ✗                                 │
-│              Dashboard    Login                               │
-│                          │                                    │
+│                          │                                  │
+│                    Authenticated?                           │
+│                     /  ✓ \ ✗                                |
+│              Dashboard    Login                             │
+│                          │                                  │
 │  ┌──────────────────────────────────────────────────────┐   │
 │  │             Dashboard Layout                         │   │
 │  │  ┌────────────────────────────────────────────────┐  │   │
-│  │  │ Sidebar (Role-Based Navigation)               │  │   │
-│  │  │ • Customer Service: Orders, Extract, Inquiries│  │   │
-│  │  │ • Warehouse: Inventory, Orders                │  │   │
-│  │  │ • FOM1/2/3: Orders, Status                    │  │   │
-│  │  │ • Accounting: Invoices, Payments              │  │   │
-│  │  │ • Admin: Users, Settings, Logs                │  │   │
+│  │  │ Sidebar (Role-Based Navigation)                │  │   │
+│  │  │ • Customer Service: Orders, Extract, Inquiries │  │   │
+│  │  │ • Warehouse: Inventory, Orders                 │  │   │
+│  │  │ • FOM1/2/3: Orders, Status                     │  │   │
+│  │  │ • Accounting: Invoices, Payments               │  │   │
+│  │  │ • Admin: Users, Settings, Logs                 │  │   │
 │  │  └────────────────────────────────────────────────┘  │   │
 │  │  ┌────────────────────────────────────────────────┐  │   │
 │  │  │ Main Content Area                              │  │   │
-│  │  │ • Role-specific dashboards                    │  │   │
-│  │  │ • Feature pages                               │  │   │
-│  │  │ • Real-time data                              │  │   │
+│  │  │ • Role-specific dashboards                     │  │   │
+│  │  │ • Feature pages                                │  │   │
+│  │  │ • Real-time data                               │  │   │
 │  │  └────────────────────────────────────────────────┘  │   │
 │  └──────────────────────────────────────────────────────┘   │
-│                                                               │
+│                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -66,36 +66,36 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                  Auth Context (React)                         │
+│                  Auth Context (React)                       │
 ├─────────────────────────────────────────────────────────────┤
-│                                                               │
+│                                                             │
 │  ┌──────────────────────────────────────────────────────┐   │
 │  │ useAuth() Hook                                       │   │
-│  │ • Get current user                                  │   │
-│  │ • Sign in / Sign up                                 │   │
-│  │ • Sign out                                          │   │
-│  │ • Check roles (hasRole)                             │   │
-│  │ • Refresh user data                                 │   │
+│  │ • Get current user                                   │   │
+│  │ • Sign in / Sign up                                  │   │
+│  │ • Sign out                                           │   │
+│  │ • Check roles (hasRole)                              │   │
+│  │ • Refresh user data                                  │   │
 │  └──────────────────────────────────────────────────────┘   │
-│                                                               │
+│                                                             │
 │  ┌──────────────────────────────────────────────────────┐   │
-│  │ AuthProvider (React Context)                        │   │
-│  │ • Manages auth state globally                       │   │
-│  │ • Listens to Firebase auth changes                  │   │
-│  │ • Provides user data to all components              │   │
+│  │ AuthProvider (React Context)                         │   │
+│  │ • Manages auth state globally                        │   │
+│  │ • Listens to Firebase auth changes                   │   │
+│  │ • Provides user data to all components               │   │
 │  └──────────────────────────────────────────────────────┘   │
-│                                                               │
+│                                                             │
 └─────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────┐
-│              Custom Hooks (Future)                            │
+│              Custom Hooks (Future)                          │
 ├─────────────────────────────────────────────────────────────┤
-│                                                               │
-│  • useOrders() - Firestore orders listener                   │
-│  • useInventory() - Warehouse inventory data                 │
-│  • usePayments() - Accounting payment data                   │
-│  • useMetrics() - Dashboard metrics                          │
-│                                                               │
+│                                                             │
+│  • useOrders() - Firestore orders listener                  │
+│  • useInventory() - Warehouse inventory data                │
+│  • usePayments() - Accounting payment data                  │
+│  • useMetrics() - Dashboard metrics                         │
+│                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -103,9 +103,9 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    API Routes                                 │
+│                    API Routes                               │
 ├─────────────────────────────────────────────────────────────┤
-│                                                               │
+│                                                             │
 │  /api/gemini/extract-order
 │  │
 │  ├─ Input: { text: string }
@@ -132,20 +132,20 @@
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│              Firebase (Backend as a Service)              │
+│              Firebase (Backend as a Service)             │
 ├──────────────────────────────────────────────────────────┤
-│                                                            │
+│                                                          │
 │  ┌───────────────────────────────────────────────────┐   │
 │  │ Authentication (Firebase Auth)                    │   │
-│  │ • Email/Password authentication                  │   │
-│  │ • Session management                             │   │
-│  │ • User credentials                               │   │
+│  │ • Email/Password authentication                   │   │
+│  │ • Session management                              │   │
+│  │ • User credentials                                │   │
 │  │ • Custom claims (future: roles)                   │   │
 │  └───────────────────────────────────────────────────┘   │
-│                                                            │
+│                                                          │
 │  ┌───────────────────────────────────────────────────┐   │
 │  │ Firestore (Document Database)                     │   │
-│  │                                                    │   │
+│  │                                                   │   │
 │  │  Collections:                                     │   │
 │  │  ├─ users/                                        │   │
 │  │  │  └─ {uid}                                      │   │
@@ -157,7 +157,7 @@
 │  │  │     ├─ createdAt                               │   │
 │  │  │     ├─ updatedAt                               │   │
 │  │  │     └─ lastLogin                               │   │
-│  │  │                                                 │   │
+│  │  │                                                │   │
 │  │  └─ orders/                                       │   │
 │  │     └─ {orderId}                                  │   │
 │  │        ├─ customerId                              │   │
@@ -168,16 +168,16 @@
 │  │        ├─ extractedBy (UID)                       │   │
 │  │        ├─ createdAt                               │   │
 │  │        └─ updatedAt                               │   │
-│  │                                                    │   │
+│  │                                                   │   │
 │  └───────────────────────────────────────────────────┘   │
-│                                                            │
+│                                                          │
 │  ┌───────────────────────────────────────────────────┐   │
 │  │ Storage (File uploads - future)                   │   │
-│  │ • Order documents                                │   │
-│  │ • User avatars                                   │   │
-│  │ • Invoice PDFs                                   │   │
+│  │ • Order documents                                 │   │
+│  │ • User avatars                                    │   │
+│  │ • Invoice PDFs                                    │   │
 │  └───────────────────────────────────────────────────┘   │
-│                                                            │
+│                                                          │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -296,7 +296,7 @@ Firestore Database
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│           User Authenticates                          │
+│           User Authenticates                         │
 └────────────────────┬─────────────────────────────────┘
                      │
          Fetch user role from Firestore
@@ -320,7 +320,7 @@ Firestore Database
         │
         ▼
    ┌─────────────────────────────────────┐
-   │  Protected Route (ProtectedRoute)    │
+   │  Protected Route (ProtectedRoute)   │
    │  • Check user is logged in          │
    │  • Check user has required role     │
    │  • Grant/deny access                │
@@ -435,12 +435,12 @@ rachamhub/
               │
     ┌─────────┼─────────┐
     ▼         ▼         ▼
- ┌────────────────┐ ┌──────────────┐ ┌──────────────┐
- │ Tailwind CSS   │ │  shadcn/ui   │ │  TypeScript  │
- │ • Responsive   │ │  • Components │ │  • Type safe │
- │ • Mobile-first │ │  • Accessible │ │  • Dev tools │
- │ • Lagos theme  │ │  • Themeable  │ │  • Intellisense
- └────────────────┘ └──────────────┘ └──────────────┘
+ ┌────────────────┐ ┌──────────────┐ ┌────────────────┐
+ │ Tailwind CSS   │ │  shadcn/ui   │ │  TypeScript    │
+ │ • Responsive   │ │  • Components│ │  • Type safe   │
+ │ • Mobile-first │ │  • Accessible│ │  • Dev tools   │
+ │ • Lagos theme  │ │  • Themeable │ │  • Intellisense|
+ └────────────────┘ └──────────────┘ └────────────────┘
     │
     └─────────┬─────────┐
               ▼         ▼
@@ -456,36 +456,36 @@ rachamhub/
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│           Client-Side Security                       │
+│           Client-Side Security                      │
 ├─────────────────────────────────────────────────────┤
 │  • Environment variables protected                  │
-│  • Protected routes with auth checks               │
-│  • Role-based access control                       │
-│  • Secure session management                       │
-│  • HTTP-only cookies (Firebase handles)            │
+│  • Protected routes with auth checks                │
+│  • Role-based access control                        │
+│  • Secure session management                        │
+│  • HTTP-only cookies (Firebase handles)             │
 └─────────────────────────────────────────────────────┘
                     │
                     ▼
 ┌─────────────────────────────────────────────────────┐
-│          Server-Side Security (Firebase)             │
+│          Server-Side Security (Firebase)            │
 ├─────────────────────────────────────────────────────┤
-│  • API key validation                              │
-│  • Authentication enforcement                      │
-│  • Authorization rules                             │
-│  • Firestore security rules                        │
-│  • Rate limiting (Firebase)                        │
-│  • DDoS protection                                 │
+│  • API key validation                               │
+│  • Authentication enforcement                       │
+│  • Authorization rules                              │
+│  • Firestore security rules                         │
+│  • Rate limiting (Firebase)                         │
+│  • DDoS protection                                  │
 └─────────────────────────────────────────────────────┘
                     │
                     ▼
 ┌─────────────────────────────────────────────────────┐
-│         Data-Level Security                          │
+│         Data-Level Security                         │
 ├─────────────────────────────────────────────────────┤
-│  • Row-level security (Firestore rules)            │
-│  • User can only access own data                   │
-│  • Role-based data access                          │
-│  • Encrypted at rest & in transit                  │
-│  • Regular backups                                 │
+│  • Row-level security (Firestore rules)             │
+│  • User can only access own data                    │
+│  • Role-based data access                           │
+│  • Encrypted at rest & in transit                   │
+│  • Regular backups                                  │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -493,35 +493,35 @@ rachamhub/
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│ Current Architecture (Phase 1)                        │
+│ Current Architecture (Phase 1)                       │
 ├──────────────────────────────────────────────────────┤
-│ • Single Firestore instance                         │
-│ • No caching layer                                  │
-│ • Direct API calls                                  │
-│ • Suitable for: 0-1000 users                       │
+│ • Single Firestore instance                          │
+│ • No caching layer                                   │
+│ • Direct API calls                                   │
+│ • Suitable for: 0-1000 users                         │
 └──────────────────────────────────────────────────────┘
                     │
                     ▼
 ┌──────────────────────────────────────────────────────┐
 │ Recommended for Phase 2 (1000-10000 users)           │
 ├──────────────────────────────────────────────────────┤
-│ • Add Redis caching layer                           │
-│ • Implement query optimization                      │
-│ • Add pagination                                    │
-│ • Add database indexing                             │
-│ • Monitor Firestore metrics                         │
+│ • Add Redis caching layer                            │
+│ • Implement query optimization                       │
+│ • Add pagination                                     │
+│ • Add database indexing                              │
+│ • Monitor Firestore metrics                          │
 └──────────────────────────────────────────────────────┘
                     │
                     ▼
 ┌──────────────────────────────────────────────────────┐
 │ Recommended for Phase 3 (10000+ users)               │
 ├──────────────────────────────────────────────────────┤
-│ • Multi-region Firestore                            │
-│ • CDN for static assets                             │
-│ • Message queue (Pub/Sub)                           │
-│ • Search service (Elasticsearch)                    │
-│ • GraphQL API layer                                 │
-│ • Microservices architecture                        │
+│ • Multi-region Firestore                             │
+│ • CDN for static assets                              │
+│ • Message queue (Pub/Sub)                            │
+│ • Search service (Elasticsearch)                     │
+│ • GraphQL API layer                                  │
+│ • Microservices architecture                         │
 └──────────────────────────────────────────────────────┘
 ```
 
@@ -529,41 +529,41 @@ rachamhub/
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│           Development Environment                     │
+│           Development Environment                    │
 ├──────────────────────────────────────────────────────┤
-│  • Local machine                                    │
-│  • pnpm dev (Next.js dev server)                   │
-│  • Firebase Emulator (optional)                    │
-│  • .env.local with test credentials               │
+│  • Local machine                                     │
+│  • pnpm dev (Next.js dev server)                     │
+│  • Firebase Emulator (optional)                      │
+│  • .env.local with test credentials                  │
 └──────────────────────────────────────────────────────┘
                     │
          Build & Test
                     │
                     ▼
 ┌──────────────────────────────────────────────────────┐
-│           Production Deployment                       │
+│           Production Deployment                      │
 ├──────────────────────────────────────────────────────┤
-│  Option 1: Vercel (Recommended)                     │
-│  • Automatic deployments from GitHub               │
-│  • Built-in performance monitoring                 │
-│  • Edge functions support                          │
-│  • Environment variable management                 │
-│                                                     │
-│  Option 2: Other Cloud Providers                   │
-│  • AWS EC2 / ECS / Lambda                          │
-│  • Google Cloud Run / App Engine                   │
-│  • Azure App Service                               │
-│  • DigitalOcean App Platform                       │
+│  Option 1: Vercel (Recommended)                      │
+│  • Automatic deployments from GitHub                 │
+│  • Built-in performance monitoring                   │
+│  • Edge functions support                            │
+│  • Environment variable management                   │
+│                                                      │
+│  Option 2: Other Cloud Providers                     │
+│  • AWS EC2 / ECS / Lambda                            │
+│  • Google Cloud Run / App Engine                     │
+│  • Azure App Service                                 │
+│  • DigitalOcean App Platform                         │
 └──────────────────────────────────────────────────────┘
                     │
                     ▼
 ┌──────────────────────────────────────────────────────┐
-│          Backend Services (Firebase)                  │
+│          Backend Services (Firebase)                 │
 ├──────────────────────────────────────────────────────┤
-│  • Firebase Auth (Google-managed)                  │
-│  • Firestore (Google-managed)                      │
-│  • Cloud Functions (optional, future)              │
-│  • Cloud Storage (optional, future)                │
+│  • Firebase Auth (Google-managed)                    │
+│  • Firestore (Google-managed)                        │
+│  • Cloud Functions (optional, future)                │
+│  • Cloud Storage (optional, future)                  │
 └──────────────────────────────────────────────────────┘
 ```
 

@@ -28,13 +28,13 @@ RachamHub is a comprehensive logistics management system designed specifically f
 
 Seven specialized dashboards for different user roles:
 
-| Role | Features |
-|------|----------|
+| Role                 | Features                                          |
+| -------------------- | ------------------------------------------------- |
 | **Customer Service** | Order creation, AI extraction, customer inquiries |
-| **Warehouse** | Inventory management, stock tracking, receiving |
-| **FOM Level 1/2/3** | Order fulfillment, status updates, operations |
-| **Accounting** | Invoices, payments, reconciliation, reports |
-| **Admin** | User management, system settings, analytics |
+| **Warehouse**        | Inventory management, stock tracking, receiving   |
+| **FOM Level 1/2/3**  | Order fulfillment, status updates, operations     |
+| **Accounting**       | Invoices, payments, reconciliation, reports       |
+| **Admin**            | User management, system settings, analytics       |
 
 ### 2. AI Order Extraction
 
@@ -81,7 +81,7 @@ rachamhub/
 │   │   │   ├── extract/             # AI extraction page
 │   │   │   └── inquiries/
 │   │   ├── warehouse/               # Warehouse dashboards
-│   │   ├── fom1/fom2/fom3/         # FOM dashboards
+│   │   ├── fom/                     # FOM dashboards
 │   │   ├── accounting/              # Accounting dashboards
 │   │   └── admin/                   # Admin dashboards
 │   ├── globals.css                  # Global styles + theme
@@ -100,17 +100,20 @@ rachamhub/
 ### Quick Start
 
 1. **Install Dependencies**
+
    ```bash
    pnpm install
    ```
 
 2. **Configure Environment Variables**
+
    ```bash
    cp .env.local.example .env.local
    # Edit .env.local with your Firebase and Gemini credentials
    ```
 
 3. **Start Development Server**
+
    ```bash
    pnpm dev
    ```
@@ -141,30 +144,35 @@ GOOGLE_GEMINI_API_KEY=your_gemini_api_key
 ## 👥 User Roles
 
 ### Customer Service (customer_service)
+
 - View and manage orders
 - Extract orders using AI
 - Handle customer inquiries
 - Dashboard: `/dashboard/customer_service`
 
 ### Warehouse (warehouse)
+
 - Inventory management
 - Stock tracking
 - Receiving operations
 - Dashboard: `/dashboard/warehouse`
 
 ### FOM Levels (fom1, fom2, fom3)
+
 - Order fulfillment operations
 - Status tracking
 - Escalation handling
-- Dashboard: `/dashboard/fom1` (and fom2, fom3)
+- Dashboard: `/dashboard/fom`
 
 ### Accounting (accounting)
+
 - Invoice management
 - Payment tracking
 - Financial reports
 - Dashboard: `/dashboard/accounting`
 
 ### Administrator (admin)
+
 - User management
 - System settings
 - Audit logs
@@ -173,16 +181,19 @@ GOOGLE_GEMINI_API_KEY=your_gemini_api_key
 ## 🎨 Design System
 
 ### Colors (Lagos Theme)
+
 - **Primary (Green)**: `#1B7A3E` - Brand color
 - **Secondary (Yellow)**: `#FCD34D` - Accent/highlight
 - **Neutral**: Black, White, and Grays
 
 ### Typography
+
 - **Headings**: Geist (system font)
 - **Body**: Geist (system font)
 - **Monospace**: Geist Mono
 
 ### Responsive Design
+
 - Mobile-first approach
 - Breakpoints: sm (640px), md (768px), lg (1024px), xl (1280px)
 - Touch-friendly interface elements
@@ -225,15 +236,19 @@ The app works with any Node.js hosting (AWS, GCP, etc.):
 ## 🐛 Troubleshooting
 
 ### "Firebase config is missing"
+
 - Ensure `.env.local` has all `NEXT_PUBLIC_FIREBASE_*` variables
 
 ### "User profile not found"
+
 - Create a Firestore document in the `users` collection with matching Firebase UID
 
 ### "Gemini API key not configured"
+
 - Set `GOOGLE_GEMINI_API_KEY` in `.env.local`
 
 ### "Cannot extract order"
+
 - Verify Gemini API is enabled in Google Cloud Console
 - Try with clearer order information
 
@@ -290,6 +305,7 @@ For internal development, follow the established patterns:
 ## 📞 Support
 
 For issues or questions:
+
 1. Check the SETUP_GUIDE.md
 2. Review browser console for errors
 3. Check Firebase console for auth/database issues

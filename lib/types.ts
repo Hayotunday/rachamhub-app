@@ -1,21 +1,17 @@
 // User roles in RachamHub
 export type UserRole =
-  | 'customer_service'
-  | 'warehouse'
-  | 'fom1'
-  | 'fom2'
-  | 'fom3'
-  | 'accounting'
-  | 'admin';
+  | "customer_service"
+  | "warehouse"
+  | "fom"
+  | "accounting"
+  | "admin";
 
 export const ROLE_LABELS: Record<UserRole, string> = {
-  customer_service: 'Customer Service',
-  warehouse: 'Warehouse',
-  fom1: 'FOM Level 1',
-  fom2: 'FOM Level 2',
-  fom3: 'FOM Level 3',
-  accounting: 'Accounting',
-  admin: 'Administrator',
+  customer_service: "Customer Service",
+  warehouse: "Warehouse",
+  fom: "FOM",
+  accounting: "Accounting",
+  admin: "Administrator",
 };
 
 // Firestore user document structure
@@ -44,7 +40,7 @@ export interface Order {
   customerName: string;
   items: OrderItem[];
   totalAmount: number;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
   createdAt: string;
   updatedAt: string;
   extractedBy?: string; // UID of customer service rep who extracted

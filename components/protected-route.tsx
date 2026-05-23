@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useAuth } from '@/lib/auth-context';
-import { UserRole } from '@/lib/types';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-import { Spinner } from '@/components/ui/spinner';
+import { useAuth } from "@/lib/auth-context";
+import { UserRole } from "@/lib/types";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { Spinner } from "@/components/ui/spinner";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -16,7 +16,7 @@ interface ProtectedRouteProps {
  * ProtectedRoute wrapper for client-side route protection
  * Redirects to login if not authenticated, or to dashboard if role is not allowed
  */
-export function ProtectedRoute({
+export default function ProtectedRoute({
   children,
   requiredRoles,
   fallback,
@@ -29,7 +29,7 @@ export function ProtectedRoute({
 
     // Not authenticated
     if (!user) {
-      router.replace('/login');
+      router.replace("/login");
       return;
     }
 
@@ -62,7 +62,11 @@ export function ProtectedRoute({
   }
 
   // Check role access
-  if (requiredRoles && requiredRoles.length > 0 && !requiredRoles.includes(user.role)) {
+  if (
+    requiredRoles &&
+    requiredRoles.length > 0 &&
+    !requiredRoles.includes(user.role)
+  ) {
     return null;
   }
 
