@@ -74,6 +74,7 @@ interface DataTableProps {
   rowKey?: string;
   onRowSave?: (row: DataTableRow) => Promise<void> | void;
   searchPlaceholder?: string;
+  secondarySearchPlaceholder?: string;
   disableSearch?: boolean;
   renderRowActions?: (
     row: DataTableRow,
@@ -177,6 +178,7 @@ export default function DataTable({
   rowKey = "id",
   onRowSave,
   searchPlaceholder = "Search rows...",
+  secondarySearchPlaceholder,
   disableSearch = false,
   merchantOptions = [],
   filterMerchant = null,
@@ -189,6 +191,7 @@ export default function DataTable({
 
   const [tableRows, setTableRows] = useState<DataTableRow[]>(rows);
   const [searchText, setSearchText] = useState("");
+  const [secondarySearchText, setSecondarySearchText] = useState("");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editRow, setEditRow] = useState<DataTableRow | null>(null);
   const [manualRealtimeEnabled, setManualRealtimeEnabled] = useState(true);
@@ -265,12 +268,14 @@ export default function DataTable({
     const hasActivity =
       editingIndex !== null ||
       searchText.trim().length > 0 ||
+      secondarySearchText.trim().length > 0 ||
       filterMerchant !== null;
     const shouldPause = hasActivity || !manualRealtimeEnabled;
     onUserActivityChange?.(shouldPause);
   }, [
     editingIndex,
     searchText,
+    secondarySearchText,
     filterMerchant,
     manualRealtimeEnabled,
     onUserActivityChange,
@@ -310,12 +315,21 @@ export default function DataTable({
   }, []);
 
   const filteredRows = useMemo(() => {
-    if (!searchText.trim()) return tableRows;
-    const query = searchText.trim().toLowerCase();
-    return tableRows.filter((row) =>
-      makeSearchString(row, columns).includes(query),
-    );
-  }, [columns, searchText, tableRows]);
+    let result = tableRows;
+    if (searchText.trim()) {
+      const query = searchText.trim().toLowerCase();
+      result = result.filter((row) =>
+        makeSearchString(row, columns).includes(query),
+      );
+    }
+    if (secondarySearchText.trim()) {
+      const query = secondarySearchText.trim().toLowerCase();
+      result = result.filter((row) =>
+        makeSearchString(row, columns).includes(query),
+      );
+    }
+    return result;
+  }, [columns, searchText, secondarySearchText, tableRows]);
 
   // ---------- activity-aware edit / search helpers ----------
 
@@ -487,6 +501,10 @@ export default function DataTable({
         <OrderSearchFilter
           searchTerm={searchText}
           onSearchTermChange={handleSearchChange}
+          secondarySearchTerm={secondarySearchText}
+          onSecondarySearchTermChange={setSecondarySearchText}
+          placeholder={searchPlaceholder}
+          secondaryPlaceholder={secondarySearchPlaceholder}
           merchantOptions={merchantOptions}
           filterMerchant={filterMerchant}
           onFilterMerchantChange={handleMerchantFilterChange}

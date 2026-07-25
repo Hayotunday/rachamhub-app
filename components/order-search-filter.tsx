@@ -6,10 +6,13 @@ import { Switch } from "@/components/ui/switch";
 interface Props {
   searchTerm: string;
   onSearchTermChange: (v: string) => void;
+  secondarySearchTerm?: string;
+  onSecondarySearchTermChange?: (v: string) => void;
   merchantOptions?: string[];
   filterMerchant?: string | null;
   onFilterMerchantChange?: (v: string | null) => void;
   placeholder?: string;
+  secondaryPlaceholder?: string;
   title?: string;
   realtimeEnabled?: boolean;
   onRealtimeToggle?: (enabled: boolean) => void;
@@ -18,10 +21,13 @@ interface Props {
 export default function OrderSearchFilter({
   searchTerm,
   onSearchTermChange,
+  secondarySearchTerm,
+  onSecondarySearchTermChange,
   merchantOptions = [],
   filterMerchant,
   onFilterMerchantChange,
   placeholder = "Search by customer, address, order id or merchant",
+  secondaryPlaceholder = "Additional search...",
   title = "Search & Filter",
   realtimeEnabled,
   onRealtimeToggle,
@@ -38,6 +44,15 @@ export default function OrderSearchFilter({
         onChange={(e) => onSearchTermChange(e.target.value)}
         className="rounded-md border border-input px-3 py-2 text-sm w-full max-w-md"
       />
+      {secondarySearchTerm !== undefined && onSecondarySearchTermChange && (
+        <input
+          aria-label="Additional search"
+          placeholder={secondaryPlaceholder}
+          value={secondarySearchTerm}
+          onChange={(e) => onSecondarySearchTermChange(e.target.value)}
+          className="rounded-md border border-input px-3 py-2 text-sm w-full max-w-md"
+        />
+      )}
       {merchantOptions.length > 0 && onFilterMerchantChange && (
         <select
           value={filterMerchant ?? ""}
@@ -60,6 +75,7 @@ export default function OrderSearchFilter({
             Realtime Updates
           </span>
           <Switch
+            className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-gray-400"
             checked={realtimeEnabled}
             onCheckedChange={onRealtimeToggle}
             aria-label="Toggle realtime updates"
