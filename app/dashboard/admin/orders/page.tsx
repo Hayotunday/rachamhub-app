@@ -597,6 +597,7 @@ export default function AdminOrdersPage() {
                 </select>
               ) : (
                 <div className="text-[10px] font-medium">
+                  Fom:{" "}
                   {fomUsers.find((u) => u.id === (row as any).fom_assigned)
                     ?.display_name || "—"}
                 </div>
@@ -621,12 +622,12 @@ export default function AdminOrdersPage() {
                 </select>
               ) : (
                 <div className="text-[10px] text-muted-foreground italic">
-                  {(row as any).rider_name || "—"}
+                  Rider: {(row as any).rider_name || "—"}
                 </div>
               )}
               {(row as any).rider_assigned_at && (
                 <div className="text-[8px] text-muted-foreground leading-none">
-                  Set:{" "}
+                  Rider Assg.:{" "}
                   {new Date((row as any).rider_assigned_at).toLocaleString([], {
                     dateStyle: "short",
                     timeStyle: "short",
@@ -637,8 +638,9 @@ export default function AdminOrdersPage() {
           );
         },
         getSearchableText: (row) =>
-          `${fomUsers.find((u) => u.id === (row as any).fom_assigned)
-            ?.display_name
+          `${
+            fomUsers.find((u) => u.id === (row as any).fom_assigned)
+              ?.display_name
           } ${(row as any).rider_name} ${new Date(
             (row as any).rider_assigned_at,
           ).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}`,
@@ -834,8 +836,9 @@ export default function AdminOrdersPage() {
           </div>
         ),
         getSearchableText: (row) =>
-          `${ccUsers.find((u) => u.id === (row.extracted_by as any))
-            ?.display_name
+          `${
+            ccUsers.find((u) => u.id === (row.extracted_by as any))
+              ?.display_name
           }`,
       },
     ],
