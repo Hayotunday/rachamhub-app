@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Switch } from "@/components/ui/switch";
 
 interface Props {
@@ -11,6 +11,8 @@ interface Props {
   merchantOptions?: string[];
   filterMerchant?: string | null;
   onFilterMerchantChange?: (v: string | null) => void;
+  dataLimit?: number;
+  onDataLimitChange?: (limit: number) => void;
   placeholder?: string;
   secondaryPlaceholder?: string;
   title?: string;
@@ -26,12 +28,45 @@ export default function OrderSearchFilter({
   merchantOptions = [],
   filterMerchant,
   onFilterMerchantChange,
+  dataLimit,
+  onDataLimitChange,
   placeholder = "Search by customer, address, order id or merchant",
   secondaryPlaceholder = "Additional search...",
   title = "Search & Filter",
   realtimeEnabled,
   onRealtimeToggle,
 }: Props) {
+  const [localSearch, setLocalSearch] = useState(searchTerm);
+  const [localSecondarySearch, setLocalSecondarySearch] = useState(
+    secondarySearchTerm ?? "",
+  );
+
+  useEffect(() => {
+    setLocalSearch(searchTerm);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    if (secondarySearchTerm !== undefined) {
+      setLocalSecondarySearch(secondarySearchTerm);
+    }
+  }, [secondarySearchTerm]);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      onSearchTermChange(localSearch);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [localSearch, onSearchTermChange]);
+
+  useEffect(() => {
+    if (onSecondarySearchTermChange) {
+      const handler = setTimeout(() => {
+        onSecondarySearchTermChange(localSecondarySearch);
+      }, 300);
+      return () => clearTimeout(handler);
+    }
+  }, [localSecondarySearch, onSecondarySearchTermChange]);
+
   return (
     <div className="flex flex-wrap items-center gap-3 mb-4">
       <h1 className="text-lg font-semibold text-foreground w-full md:w-auto">
@@ -40,16 +75,16 @@ export default function OrderSearchFilter({
       <input
         aria-label="Search orders"
         placeholder={placeholder}
-        value={searchTerm}
-        onChange={(e) => onSearchTermChange(e.target.value)}
+        value={localSearch}
+        onChange={(e) => setLocalSearch(e.target.value)}
         className="rounded-md border border-input px-3 py-2 text-sm w-full max-w-md"
       />
       {secondarySearchTerm !== undefined && onSecondarySearchTermChange && (
         <input
           aria-label="Additional search"
           placeholder={secondaryPlaceholder}
-          value={secondarySearchTerm}
-          onChange={(e) => onSecondarySearchTermChange(e.target.value)}
+          value={localSecondarySearch}
+          onChange={(e) => setLocalSecondarySearch(e.target.value)}
           className="rounded-md border border-input px-3 py-2 text-sm w-full max-w-md"
         />
       )}
@@ -67,6 +102,21 @@ export default function OrderSearchFilter({
               {m}
             </option>
           ))}
+        </select>
+      )}
+      {dataLimit !== undefined && onDataLimitChange && (
+        <select
+          value={dataLimit}
+          onChange={(e) => onDataLimitChange(Number(e.target.value))}
+          className="rounded-md border border-input px-3 py-2 text-sm"
+          title="Data Limit"
+        >
+          <option value={50}>50 rows</option>
+          <option value={100}>100 rows</option>
+          <option value={250}>250 rows</option>
+          <option value={500}>500 rows</option>
+          <option value={1000}>1000 rows</option>
+          <option value={2000}>2000 rows</option>
         </select>
       )}
       {onRealtimeToggle && (

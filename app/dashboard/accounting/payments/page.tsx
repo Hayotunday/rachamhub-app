@@ -23,6 +23,7 @@ export default function PaymentsPage() {
   const [error, setError] = useState<string | null>(null);
   // Pause realtime while the user is searching or filtering
   const [realtimePaused, setRealtimePaused] = useState(false);
+  const [dataLimit, setDataLimit] = useState(100);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -39,7 +40,8 @@ export default function PaymentsPage() {
           .from("orders")
           .select("*")
           .eq("payment_confirmed", true)
-          .order("updated_at", { ascending: false }),
+          .order("updated_at", { ascending: false })
+          .limit(dataLimit),
         supabase!.from("landmarks").select("*").eq("is_active", true),
         supabase!.from("users").select("id, display_name").eq("role", "fom"),
         supabase!
@@ -61,7 +63,7 @@ export default function PaymentsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [dataLimit]);
 
   useEffect(() => {
     fetchData();
@@ -271,6 +273,8 @@ export default function PaymentsPage() {
             filterMerchant={filterMerchant}
             onFilterMerchantChange={setFilterMerchant}
             onUserActivityChange={setRealtimePaused}
+            dataLimit={dataLimit}
+            onDataLimitChange={setDataLimit}
           />
         </Card>
       )}

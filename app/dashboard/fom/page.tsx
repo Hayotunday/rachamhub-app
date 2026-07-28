@@ -12,6 +12,7 @@ import {
   Check,
 } from "lucide-react";
 import { useSupabaseRealtime } from "@/hooks/use-supabase-realtime";
+import { useGlobalStats } from "@/hooks/use-global-stats";
 import { supabase } from "@/lib/supabase";
 import { Order } from "@/lib/types";
 import DataTable, { type DataTableColumn } from "@/components/data-table";
@@ -56,6 +57,9 @@ export default function FOMDashboard() {
   const [merchantOptions, setMerchantOptions] = useState<string[]>([]);
   // Pause realtime while the user is editing a row, searching or filtering
   const [realtimePaused, setRealtimePaused] = useState(false);
+  const [dataLimit, setDataLimit] = useState(100);
+
+  const { stats, refreshStats } = useGlobalStats(user?.uid);
 
   const fetchData = useCallback(async () => {
     if (!user?.uid) return;
@@ -71,7 +75,8 @@ export default function FOMDashboard() {
         .from("orders")
         .select("*")
         .eq("fom_assigned", user.uid)
-        .order("created_at", { ascending: false }),
+        .order("created_at", { ascending: false })
+        .limit(dataLimit),
       supabase!
         .from("riders")
         .select("name")
@@ -104,7 +109,7 @@ export default function FOMDashboard() {
     }
 
     setLoading(false);
-  }, [user?.uid]);
+  }, [user?.uid, dataLimit]);
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -471,18 +476,10 @@ export default function FOMDashboard() {
   );
 
   const fomLevel = user?.role.toUpperCase() || "FOM";
-  const assignedOrders = orders.length;
-  const inProgress = orders.filter(
-    (order) => order.fom_delivery_status === "processing",
-  ).length;
-  const readyForDelivery = orders.filter(
-    (order) => order.fom_delivery_status === "shipped",
-  ).length;
-  const completedToday = orders.filter(
-    (order) =>
-      order.fom_delivery_status === "delivered" &&
-      new Date(order.updated_at).toDateString() === new Date().toDateString(),
-  ).length;
+  const assignedOrders = stats.fom_assigned;
+  const inProgress = stats.fom_in_progress;
+  const readyForDelivery = stats.fom_ready;
+  const completedToday = stats.fom_completed_today;
 
   return (
     <div className="space-y-6">
@@ -571,6 +568,8 @@ export default function FOMDashboard() {
           showActions
           renderRowActions={renderRowActions}
           onUserActivityChange={setRealtimePaused}
+          dataLimit={dataLimit}
+          onDataLimitChange={setDataLimit}
         />
       </Card>
 

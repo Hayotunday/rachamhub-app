@@ -63,6 +63,7 @@ export default function OrdersPage() {
   const [filterMerchant, setFilterMerchant] = useState<string | null>(null);
   // Pause realtime while the user is editing a row, searching or filtering
   const [realtimePaused, setRealtimePaused] = useState(false);
+  const [dataLimit, setDataLimit] = useState(100);
 
   const [modalField, setModalField] = useState<
     | "customer_name"
@@ -101,7 +102,8 @@ export default function OrdersPage() {
         supabase!
           .from("orders")
           .select("*")
-          .order("created_at", { ascending: false }),
+          .order("created_at", { ascending: false })
+          .limit(dataLimit),
         supabase!.from("users").select("id, display_name").eq("role", "fom"),
       ]);
 
@@ -122,7 +124,7 @@ export default function OrdersPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [dataLimit]);
 
   useEffect(() => {
     fetchOrders();
@@ -578,6 +580,8 @@ export default function OrdersPage() {
               );
             }}
             onUserActivityChange={setRealtimePaused}
+            dataLimit={dataLimit}
+            onDataLimitChange={setDataLimit}
           />
         </Card>
       )}

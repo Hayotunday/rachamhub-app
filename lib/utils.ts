@@ -30,9 +30,9 @@ const getOrders = async (startDate?: Date, endDate?: Date) => {
     query = query.lte("created_at", end.toISOString());
   }
 
-  const { data, error: fetchError } = await query.order("created_at", {
-    ascending: false,
-  });
+  const { data, error: fetchError } = await query
+    .order("created_at", { ascending: false })
+    .limit(10000);
 
   const { data: landmarksData } = await supabase!.from("landmarks").select("*");
 

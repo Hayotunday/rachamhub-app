@@ -51,6 +51,8 @@ export default function FOMOrdersPage() {
   const [merchantOptions, setMerchantOptions] = useState<string[]>([]);
   // Pause realtime while the user is editing a row, searching or filtering
   const [realtimePaused, setRealtimePaused] = useState(false);
+  const [dataLimit, setDataLimit] = useState(100);
+  const [totalCount, setTotalCount] = useState<number | null>(null);
 
   const fetchOrders = useCallback(async () => {
     if (!user?.uid) return;
@@ -67,10 +69,11 @@ export default function FOMOrdersPage() {
       ] = await Promise.all([
         supabase!
           .from("orders")
-          .select("*")
+          .select("*", { count: "exact" })
           .eq("fom_assigned", user.uid)
           .or("status.eq.fom, status.eq.accounting")
-          .order("created_at", { ascending: false }),
+          .order("created_at", { ascending: false })
+          .limit(dataLimit),
         supabase!
           .from("merchants")
           .select("name")
@@ -97,6 +100,7 @@ export default function FOMOrdersPage() {
         setLandmarks(landmarkData);
       }
       setOrders((ordersData ?? []) as Order[]);
+      setTotalCount(ordersData?.length ?? 0);
       setFoms((fomUserData ?? []) as any[]);
       setCcUsers((ccUserData ?? []) as any[]);
     } catch (err) {
@@ -106,7 +110,7 @@ export default function FOMOrdersPage() {
     } finally {
       setLoading(false);
     }
-  }, [user?.uid]);
+  }, [user?.uid, dataLimit]);
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -549,6 +553,7 @@ export default function FOMOrdersPage() {
           <div className="rounded-xl border border-border bg-muted/50 px-4 py-2 text-sm text-foreground">
             {ordersByMerchant.length} active order
             {ordersByMerchant.length === 1 ? "" : "s"}
+            {totalCount !== null && totalCount > orders.length ? ` (${totalCount} total in DB)` : ""}
           </div>
         </div>
 
@@ -574,6 +579,9 @@ export default function FOMOrdersPage() {
             showActions
             renderRowActions={renderRowActions}
             onUserActivityChange={setRealtimePaused}
+            dataLimit={dataLimit}
+            onDataLimitChange={setDataLimit}
+            totalCount={totalCount ?? undefined}
           />
         )}
       </Card>

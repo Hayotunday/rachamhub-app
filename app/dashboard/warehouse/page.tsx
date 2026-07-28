@@ -57,6 +57,8 @@ export default function WarehouseOrdersPage() {
   const [merchantOptions, setMerchantOptions] = useState<string[]>([]);
   // Pause realtime while the user is editing a row, searching or filtering
   const [realtimePaused, setRealtimePaused] = useState(false);
+  const [dataLimit, setDataLimit] = useState(100);
+  const [totalCount, setTotalCount] = useState<number | null>(null);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
@@ -71,9 +73,10 @@ export default function WarehouseOrdersPage() {
       ] = await Promise.all([
         supabase!
           .from("orders")
-          .select("*")
+          .select("*", { count: "exact" })
           .neq("warehouse_status", "out-of-stock")
-          .order("created_at", { ascending: false }),
+          .order("created_at", { ascending: false })
+          .limit(dataLimit),
         supabase!
           .from("users")
           .select("id, display_name")
@@ -93,12 +96,13 @@ export default function WarehouseOrdersPage() {
         setMerchantOptions(merchantsData.map((m: any) => m.name));
       if (fomUserData) setFomUsers(fomUserData);
       setOrders((ordersData ?? []) as Order[]);
+      setTotalCount(ordersData?.length ?? 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to load orders.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [dataLimit]);
 
   useEffect(() => {
     fetchOrders();
@@ -519,7 +523,7 @@ export default function WarehouseOrdersPage() {
           <div className="rounded-xl border border-border bg-muted/50 px-4 py-2 text-sm text-foreground">
             {filteredActionableOrders.length}{" "}
             {filteredActionableOrders.length === 1 ? "order" : "orders"} in the
-            queue
+            queue{totalCount !== null && totalCount > filteredActionableOrders.length ? ` (${totalCount} total in DB)` : ""}
           </div>
         </div>
 
@@ -545,6 +549,9 @@ export default function WarehouseOrdersPage() {
               showActions
               renderRowActions={renderRowActions}
               onUserActivityChange={setRealtimePaused}
+              dataLimit={dataLimit}
+              onDataLimitChange={setDataLimit}
+              totalCount={totalCount ?? undefined}
             />
           </div>
         )}

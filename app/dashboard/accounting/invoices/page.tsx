@@ -25,6 +25,7 @@ export default function InvoicesPage() {
   >({});
   // Pause realtime while the user is searching or filtering
   const [realtimePaused, setRealtimePaused] = useState(false);
+  const [dataLimit, setDataLimit] = useState(100);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -42,7 +43,8 @@ export default function InvoicesPage() {
           .select("*")
           .eq("status", "fom")
           .neq("rider_name", null)
-          .order("created_at", { ascending: false }),
+          .order("created_at", { ascending: false })
+          .limit(dataLimit),
         supabase!
           .from("merchants")
           .select("name")
@@ -65,7 +67,7 @@ export default function InvoicesPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [dataLimit]);
 
   useEffect(() => {
     fetchData();
@@ -399,6 +401,8 @@ export default function InvoicesPage() {
             onFilterMerchantChange={setFilterMerchant}
             searchPlaceholder="Search invoices..."
             onUserActivityChange={setRealtimePaused}
+            dataLimit={dataLimit}
+            onDataLimitChange={setDataLimit}
           />
         </Card>
       )}

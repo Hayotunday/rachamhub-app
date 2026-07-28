@@ -33,7 +33,7 @@ export default function ProgressReportPage() {
         await Promise.all([
           supabase!.from("merchants").select("id, name").eq("is_active", true).order("name"),
           supabase!.from("products").select("id, name, merchant_id").order("name"),
-          supabase!.from("orders").select("*").order("created_at", { ascending: false }),
+          supabase!.from("orders").select("*").order("created_at", { ascending: false }).limit(10000),
         ]);
       if (merchantData) setMerchants(merchantData);
       if (productData) setProducts(productData);

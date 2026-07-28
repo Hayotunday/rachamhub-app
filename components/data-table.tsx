@@ -92,6 +92,11 @@ interface DataTableProps {
    * being interacted with, then resume once they are done.
    */
   onUserActivityChange?: (active: boolean) => void;
+  /** The number of rows to request from the server. Displayed in the search bar as a limit selector. */
+  dataLimit?: number;
+  onDataLimitChange?: (limit: number) => void;
+  /** Total count of matching records in the database (may exceed the fetched rows). */
+  totalCount?: number;
 }
 
 type DialogContext = {
@@ -185,6 +190,9 @@ export default function DataTable({
   onFilterMerchantChange = () => {},
   renderRowActions,
   onUserActivityChange,
+  dataLimit,
+  onDataLimitChange,
+  totalCount,
 }: DataTableProps) {
   const columns = useMemo(() => headers.map(normalizeColumn), [headers]);
   const serialColumnWidth = "64px";
@@ -508,6 +516,8 @@ export default function DataTable({
           merchantOptions={merchantOptions}
           filterMerchant={filterMerchant}
           onFilterMerchantChange={handleMerchantFilterChange}
+          dataLimit={dataLimit}
+          onDataLimitChange={onDataLimitChange}
           realtimeEnabled={manualRealtimeEnabled}
           onRealtimeToggle={
             onUserActivityChange ? setManualRealtimeEnabled : undefined
@@ -670,6 +680,18 @@ export default function DataTable({
           </table>
         </div>
       </div>
+
+      {totalCount !== undefined && totalCount > rows.length && onDataLimitChange && (
+        <div className="flex justify-center p-4 border-t border-border bg-white rounded-b-xl">
+          <Button 
+            variant="outline" 
+            onClick={() => onDataLimitChange((dataLimit || rows.length) + 100)}
+            className="text-sm font-medium"
+          >
+            Load More (Showing {rows.length} of {totalCount})
+          </Button>
+        </div>
+      )}
 
       <Dialog
         open={Boolean(dialogContext)}

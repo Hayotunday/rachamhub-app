@@ -11,6 +11,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useSupabaseRealtime } from "@/hooks/use-supabase-realtime";
+import { useGlobalStats } from "@/hooks/use-global-stats";
 import { supabase } from "@/lib/supabase";
 import { Order } from "@/lib/types";
 import Link from "next/link";
@@ -19,46 +20,8 @@ export const dynamic = "force-dynamic";
 
 export default function AccountingDashboard() {
   const { user } = useAuth();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchAccountingOrders = useCallback(async () => {
-    setLoading(true);
-    const { data } = await supabase!
-      .from("orders")
-      .select("*")
-      .order("created_at", { ascending: false });
-    setOrders((data ?? []) as Order[]);
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    fetchAccountingOrders();
-  }, []);
-
-  useSupabaseRealtime(
-    [{ table: "orders", event: "*" }],
-    fetchAccountingOrders,
-    [],
-  );
-
-  const totalRevenue = useMemo(
-    () =>
-      orders
-        .filter((o) => (o as any).payment_confirmed === true)
-        .reduce((sum, order) => sum + Number(order.total_amount), 0),
-    [orders],
-  );
-
-  const pendingInvoices = orders.filter(
-    (order) =>
-      order.fom_delivery_status === "delivered" &&
-      (order as any).payment_confirmed !== true,
-  ).length;
-
-  const confirmedPayments = orders.filter(
-    (order) => (order as any).payment_confirmed === true,
-  ).length;
+  
+  const { stats, loading } = useGlobalStats();
 
   return (
     <div className="space-y-6">
@@ -87,7 +50,7 @@ export default function AccountingDashboard() {
                   Confirmed Revenue
                 </p>
                 <p className="text-2xl font-bold text-foreground mt-2">
-                  ₦{totalRevenue.toLocaleString()}
+                  ₦{stats.accounting_revenue.toLocaleString()}
                 </p>
               </div>
               <DollarSign className="h-6 w-6 text-primary" />
@@ -100,7 +63,7 @@ export default function AccountingDashboard() {
                   Pending Confirmations
                 </p>
                 <p className="text-2xl font-bold text-foreground mt-2">
-                  {pendingInvoices}
+                  {stats.accounting_pending}
                 </p>
               </div>
               <AlertCircle className="h-6 w-6 text-secondary" />
@@ -113,7 +76,7 @@ export default function AccountingDashboard() {
                   Verified Payments
                 </p>
                 <p className="text-2xl font-bold text-foreground mt-2">
-                  {confirmedPayments}
+                  {stats.accounting_confirmed}
                 </p>
               </div>
               <CheckCircle2 className="h-6 w-6 text-emerald-500" />
@@ -126,7 +89,7 @@ export default function AccountingDashboard() {
                   Pending Count
                 </p>
                 <p className="text-2xl font-bold text-foreground mt-2">
-                  {pendingInvoices}
+                  {stats.accounting_pending}
                 </p>
               </div>
               <TrendingUp className="h-6 w-6 text-red-600" />

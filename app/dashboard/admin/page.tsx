@@ -15,23 +15,22 @@ import {
   Layers,
   Settings,
 } from "lucide-react";
-import { Order } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export default function AdminDashboard() {
   const { user } = useAuth();
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersCount, setOrdersCount] = useState(0);
   const [usersCount, setUsersCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const fetchAdminMetrics = useCallback(async () => {
     setLoading(true);
-    const [{ data: orderData }, { data: userData }] = await Promise.all([
-      supabase!.from("orders").select("*"),
+    const [{ count: orderCount }, { data: userData }] = await Promise.all([
+      supabase!.from("orders").select("*", { count: "exact", head: true }),
       supabase!.from("users").select("id"),
     ]);
-    setOrders((orderData ?? []) as Order[]);
+    setOrdersCount(orderCount ?? 0);
     setUsersCount((userData ?? []).length);
     setLoading(false);
   }, []);
@@ -89,7 +88,7 @@ export default function AdminDashboard() {
                   Total Orders
                 </p>
                 <p className="text-2xl font-bold text-foreground mt-2">
-                  {orders.length}
+                  {ordersCount}
                 </p>
               </div>
               <Package className="h-6 w-6 text-secondary" />
@@ -113,11 +112,9 @@ export default function AdminDashboard() {
                   Revenue
                 </p>
                 <p className="text-2xl font-bold text-foreground mt-2">
-                  ₦
-                  {orders
-                    .reduce((sum, order) => sum + Number(order.total_amount), 0)
-                    .toLocaleString()}
+                  —
                 </p>
+                <p className="text-xs text-muted-foreground">See Admin Orders for details</p>
               </div>
               <BarChart3 className="h-6 w-6 text-green-600" />
             </div>

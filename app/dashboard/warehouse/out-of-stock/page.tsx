@@ -50,6 +50,8 @@ export default function OutOfStockPage() {
   const [merchantOptions, setMerchantOptions] = useState<string[]>([]);
   // Pause realtime while the user is editing a row, searching or filtering
   const [realtimePaused, setRealtimePaused] = useState(false);
+  const [dataLimit, setDataLimit] = useState(100);
+  const [totalCount, setTotalCount] = useState<number | null>(null);
 
   const startEditing = useCallback((order: Order) => {
     setEditingId(order.id);
@@ -211,9 +213,10 @@ export default function OutOfStockPage() {
       ] = await Promise.all([
         supabase!
           .from("orders")
-          .select("*")
+          .select("*", { count: "exact" })
           .eq("warehouse_status", "out-of-stock")
-          .order("created_at", { ascending: false }),
+          .order("created_at", { ascending: false })
+          .limit(dataLimit),
         supabase!
           .from("merchants")
           .select("name")
@@ -233,6 +236,7 @@ export default function OutOfStockPage() {
       if (fomUserData) setFomUsers(fomUserData);
       if (ccUserData) setCcUsers(ccUserData);
       setOrders((ordersData ?? []) as Order[]);
+      setTotalCount(ordersData?.length ?? 0);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Unable to load inventory.",
@@ -240,7 +244,7 @@ export default function OutOfStockPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [dataLimit]);
 
   const handleSaveComment = () => {
     if (
@@ -414,7 +418,8 @@ export default function OutOfStockPage() {
             Out of Stock Queue
           </h2>
           <div className="text-sm text-muted-foreground">
-            {actionableOrders.length} orders total
+            {actionableOrders.length} orders shown
+            {totalCount !== null ? ` · ${totalCount} total in DB` : ""}
           </div>
         </div>
 
@@ -428,6 +433,9 @@ export default function OutOfStockPage() {
             showActions
             renderRowActions={renderRowActions}
             onUserActivityChange={setRealtimePaused}
+            dataLimit={dataLimit}
+            onDataLimitChange={setDataLimit}
+            totalCount={totalCount ?? undefined}
           />
         </div>
       </Card>

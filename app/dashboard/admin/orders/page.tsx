@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSupabaseRealtime } from "@/hooks/use-supabase-realtime";
+import { useGlobalStats } from "@/hooks/use-global-stats";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -49,6 +50,10 @@ export default function AdminOrdersPage() {
   const [editForm, setEditForm] = useState<Order | null>(null);
   const [fomUsers, setFomUsers] = useState<any[]>([]);
   const [ccUsers, setCcUsers] = useState<any[]>([]);
+
+  // We only fetch global stats once per component mount (or when updated)
+  const { stats, refreshStats } = useGlobalStats();
+
   const [merchantOptions, setMerchantOptions] = useState<string[]>([]);
   const [riderOptions, setRiderOptions] = useState<string[]>([]);
   const [landmarks, setLandmarks] = useState<any[]>([]);
@@ -57,6 +62,8 @@ export default function AdminOrdersPage() {
 
   // Pause realtime while the user is editing a row, searching or filtering
   const [realtimePaused, setRealtimePaused] = useState(false);
+  const [dataLimit, setDataLimit] = useState(100);
+  const [totalCount, setTotalCount] = useState<number | null>(null);
 
   // Modal states for long text fields
   const [modalOpen, setModalOpen] = useState(false);
@@ -110,8 +117,9 @@ export default function AdminOrdersPage() {
     try {
       let query = supabase!
         .from("orders")
-        .select("*")
-        .order("created_at", { ascending: false });
+        .select("*", { count: "exact" })
+        .order("created_at", { ascending: false })
+        .limit(dataLimit);
       if (startDate) {
         query = query.gte("created_at", `${startDate}T00:00:00Z`);
       }
@@ -119,15 +127,16 @@ export default function AdminOrdersPage() {
         query = query.lte("created_at", `${endDate}T23:59:59Z`);
       }
 
-      const { data, error: fetchError } = await query;
+      const { data, count, error: fetchError } = await query;
       if (fetchError) throw fetchError;
       setOrders((data ?? []) as Order[]);
+      setTotalCount(count ?? 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to load orders.");
     } finally {
       setLoading(false);
     }
-  }, [endDate, startDate]);
+  }, [endDate, startDate, dataLimit]);
 
   useEffect(() => {
     fetchOrders();
@@ -227,6 +236,7 @@ export default function AdminOrdersPage() {
       setEditingId(null);
       setEditForm(null);
       fetchOrders();
+      refreshStats();
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "Failed to update order",
@@ -252,6 +262,7 @@ export default function AdminOrdersPage() {
         .eq("id", id);
       if (deleteError) throw deleteError;
       await fetchOrders();
+      refreshStats();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to delete order.");
     } finally {
@@ -912,41 +923,16 @@ export default function AdminOrdersPage() {
   );
 
   const summary = useMemo(() => {
-    const total = orders.length;
-    const delivered = orders.filter(
-      (order) =>
-        order.fom_delivery_status === "delivered" ||
-        order.inventory_status === "delivered",
-    ).length;
-    const failed = orders.filter(
-      (order) =>
-        order.fom_delivery_status === "failed" ||
-        order.fom_delivery_status === "cancelled",
-    ).length;
-    const revenue = orders.reduce(
-      (sum, order) => sum + Number(order.amount_paid || 0),
-      0,
-    );
-    const owed = orders.reduce(
-      (sum, order) => sum + Number(order.payment_to_merchant || 0),
-      0,
-    );
-    const fees = orders.reduce(
-      (sum, order) =>
-        sum +
-        Number(landmarks!.find((l) => l.name === order.landmark)?.price || 0),
-      0,
-    );
     return {
-      total,
-      delivered,
-      failed,
-      revenue,
-      owed,
-      fees,
-      successRate: total === 0 ? 0 : Math.round((delivered / total) * 100),
+      total: stats.total_orders,
+      delivered: stats.delivered_orders,
+      failed: stats.failed_orders,
+      revenue: stats.total_revenue,
+      owed: stats.total_owed,
+      fees: stats.total_fees,
+      successRate: stats.total_orders === 0 ? 0 : Math.round((stats.delivered_orders / stats.total_orders) * 100),
     };
-  }, [orders]);
+  }, [stats]);
 
   return (
     <div className="space-y-6">
@@ -971,7 +957,7 @@ export default function AdminOrdersPage() {
       <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
         <div className="rounded-2xl border border-border p-4">
           <p className="text-sm text-muted-foreground">Total orders</p>
-          <p className="mt-2 text-3xl font-semibold text-foreground">
+          <p className="mt-2 text-3xl font-bold text-foreground">
             {summary.total}
           </p>
         </div>
@@ -1065,6 +1051,9 @@ export default function AdminOrdersPage() {
             showActions
             renderRowActions={renderRowActions}
             onUserActivityChange={setRealtimePaused}
+            dataLimit={dataLimit}
+            onDataLimitChange={setDataLimit}
+            totalCount={totalCount ?? undefined}
           />
         </Card>
       )}
