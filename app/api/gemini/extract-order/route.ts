@@ -30,8 +30,10 @@ Rules:
 6. Ensure quantities are numbers, not strings
 7. If no total amount is provided, use 0
 8. Ensure the JSON is properly formatted and valid
-9. Ensure the quantity and total amount are not multiplied under any circumstances.
-   If the text mentions "2 items of 3", the quantity should be 2, not 6.
+
+Note: Never allow the price/total amount and quantity to be multiplied under any circumstances.
+      If the text mentions "qty: 2, price: ₦45,000", the quantity should be 3, and total amount 
+      should be ₦45,000 not ₦135,000.
 
 Text to extract from:
 `;

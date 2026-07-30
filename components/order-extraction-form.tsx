@@ -206,6 +206,11 @@ export default function OrderExtractionForm() {
               disabled={isLoading}
               className="min-h-32 font-mono text-sm"
             />
+            <p className="italic text-xs aliased text-muted-foreground mt-1">
+              Note: While AI text tools offer speed, they often make mistakes by
+              inventing facts, using a robotic tone, and distorting your
+              original meaning.
+            </p>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
@@ -271,10 +276,6 @@ export default function OrderExtractionForm() {
               </p>
               <p className="max-w-2xl text-sm text-muted-foreground">
                 Verify and update the AI extraction before submitting the order.
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Order number prefix:{" "}
-                <span className="font-medium">{orderPrefix}</span>
               </p>
             </div>
             <div className="flex flex-wrap gap-3">

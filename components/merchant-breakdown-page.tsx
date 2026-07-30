@@ -184,10 +184,10 @@ export default function MerchantBreakdownPage() {
         const landmark = order.landmark || "—";
         const landmarkPrice = landmarksMap.get(landmark.toLowerCase()) || 0;
         const riderFee = Number(landmarkPrice);
-        const landmarkLine = `${landmark} – ${riderFee.toLocaleString()}`;
+        const landmarkLine = `${landmark} – ₦${riderFee.toLocaleString()}`;
         const amount = isFailed
           ? "" // failed: no amount
-          : `-${Number(order.total_amount || 0).toLocaleString()}`;
+          : `₦${Number(order.total_amount || 0).toLocaleString()}`;
 
         paragraphs.push(para(order.fom_delivery_status!?.toLowerCase(), true));
         paragraphs.push(para(order.customer_name));
@@ -204,21 +204,25 @@ export default function MerchantBreakdownPage() {
       const totalOrder = orders
         .filter((o) => o.fom_delivery_status?.toLowerCase() === "delivered")
         .reduce((s, o) => s + Number(o.total_amount || 0), 0);
+      const amountPaid = orders
+        .filter((o) => o.fom_delivery_status?.toLowerCase() === "delivered")
+        .reduce((s, o) => s + Number(o.amount_paid || 0), 0);
       const totalDelivery = orders.reduce((s, o) => {
         const lPrice = landmarksMap.get((o.landmark || "").toLowerCase()) || 0;
         return s + Number(lPrice);
       }, 0);
-      const totalBalance = totalOrder - totalDelivery;
+      const totalBalance = amountPaid - totalDelivery;
 
-      paragraphs.push(para(`Total order =${totalOrder.toLocaleString()}`));
+      paragraphs.push(para(`Total order = ₦${totalOrder.toLocaleString()}`));
+      paragraphs.push(para(`Amount Paid = ₦${amountPaid.toLocaleString()}`));
       paragraphs.push(
-        para(`Total Delivery =${totalDelivery.toLocaleString()}`),
+        para(`Total Delivery = ₦${totalDelivery.toLocaleString()}`),
       );
-      paragraphs.push(para("Total service charge="));
+      paragraphs.push(para("Total service charge ="));
       paragraphs.push(blank());
       paragraphs.push(blank());
       paragraphs.push(
-        para(`Total balance = ${totalBalance.toLocaleString()}`, true),
+        para(`Total balance = ₦${totalBalance.toLocaleString()}`, true),
       );
       paragraphs.push(blank());
 
