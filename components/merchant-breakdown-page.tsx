@@ -279,7 +279,7 @@ export default function MerchantBreakdownPage() {
     const pendingCount = orders.filter(
       (o) =>
         !o.fom_delivery_status ||
-        !["delivered", "failed", "returned", "cancelled"].includes(
+        !["delivered", "failed", "returned", "canceled", "shelved"].includes(
           o.fom_delivery_status.toLowerCase(),
         ),
     ).length;

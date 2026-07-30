@@ -32,11 +32,12 @@ export const dynamic = "force-dynamic";
 
 const PAYMENT_METHODS = ["Cash", "Transfer", "PBD"];
 const DELIVERY_STATUSES = [
-  "Delivered",
-  "shipped",
-  "Returned",
-  "Failed",
-  "Cancelled",
+  "pending",
+  "delivered",
+  "returned",
+  "failed",
+  "canceled",
+  "shelved",
 ];
 
 export default function FOMDashboard() {
@@ -392,7 +393,7 @@ export default function FOMDashboard() {
               updateRowInput(String(row.id), "delivery_status", e.target.value)
             }
           >
-            <option value="">Pending</option>
+            <option value="">Select status</option>
             {DELIVERY_STATUSES.map((s) => (
               <option key={s} value={s}>
                 {s}

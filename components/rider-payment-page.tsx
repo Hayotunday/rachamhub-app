@@ -371,7 +371,7 @@ export default function RiderPaymentsPage() {
                               </td>
                               <td className="p-3">
                                 <span
-                                  className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase ${d.isFailed || ["failed", "returned", "cancelled"].includes(d.status.toLowerCase())
+                                  className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase ${d.isFailed || ["failed", "returned", "canceled", "shelved"].includes(d.status.toLowerCase())
                                       ? "bg-red-100 text-red-700"
                                       : d.status.toLowerCase() === "delivered"
                                         ? "bg-emerald-100 text-emerald-700"

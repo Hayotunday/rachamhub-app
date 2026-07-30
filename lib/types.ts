@@ -14,14 +14,13 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   admin: "Administrator",
 };
 
-export type OrderStatus =
+export type OrderDeliveryStatus =
   | "pending"
-  | "shelved"
-  | "shipped"
   | "returned"
   | "delivered"
-  | "cancelled"
-  | "failed";
+  | "canceled"
+  | "failed"
+  | "shelved";
 
 // Firestore user document structure
 export interface UserProfile {
@@ -54,8 +53,8 @@ export interface Order {
   items: OrderItem[];
   total_amount: number;
   status: UserRole; // Reflects which department is currently handling the order
-  inventory_status?: string | null; // delivery status for warehouse dashboard
-  fom_delivery_status?: string | null;
+  inventory_status?: OrderDeliveryStatus | null; // delivery status for warehouse dashboard
+  fom_delivery_status?: OrderDeliveryStatus | null;
   warehouse_status?: string | null;
   warehouse_comment?: string | null;
   fom_assigned?: string | null;

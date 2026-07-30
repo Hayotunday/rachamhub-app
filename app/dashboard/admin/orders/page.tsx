@@ -491,16 +491,17 @@ export default function AdminOrdersPage() {
                     onChange={(e) =>
                       setEditForm((p: any) => ({
                         ...p,
-                        inventory_status: e.target.value,
+                        inventory_status: e.target.value as any,
                       }))
                     }
                   >
                     {[
                       "pending",
                       "delivered",
-                      "cancelled",
-                      "failed",
                       "returned",
+                      "failed",
+                      "canceled",
+                      "shelved",
                     ].map((s) => (
                       <option key={s} value={s}>
                         {s}
@@ -531,16 +532,17 @@ export default function AdminOrdersPage() {
                     onChange={(e) =>
                       setEditForm((p: any) => ({
                         ...p,
-                        fom_delivery_status: e.target.value,
+                        fom_delivery_status: e.target.value as any,
                       }))
                     }
                   >
                     {[
                       "pending",
                       "delivered",
-                      "cancelled",
-                      "failed",
                       "returned",
+                      "failed",
+                      "canceled",
+                      "shelved",
                     ].map((s) => (
                       <option key={s} value={s}>
                         {s}
@@ -951,7 +953,7 @@ export default function AdminOrdersPage() {
           </p>
         </div>
         <div className="rounded-2xl border border-border p-4">
-          <p className="text-sm text-muted-foreground">Failed / cancelled</p>
+          <p className="text-sm text-muted-foreground">Failed / canceled</p>
           <p className="mt-2 text-3xl font-semibold text-foreground">
             {summary.failed}
           </p>

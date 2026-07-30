@@ -25,11 +25,11 @@ import { toast } from "sonner";
 
 const STATUS_STYLES: Record<string, string> = {
   pending: "bg-purple-100 text-purple-900",
-  shipped: "bg-blue-100 text-blue-900",
   delivered: "bg-emerald-100 text-emerald-900",
-  cancelled: "bg-slate-100 text-slate-900",
-  shelved: "bg-amber-100 text-amber-900",
   returned: "bg-orange-100 text-orange-900",
+  failed: "bg-red-100 text-red-900",
+  canceled: "bg-slate-100 text-slate-900",
+  shelved: "bg-amber-100 text-amber-900",
 };
 
 export default function InventoryPage() {
@@ -157,17 +157,17 @@ export default function InventoryPage() {
               value={(editForm as any)?.inventory_status || ""}
               onChange={(e) =>
                 setEditForm((prev) =>
-                  prev ? { ...prev, inventory_status: e.target.value } : prev,
+                  prev ? { ...prev, inventory_status: e.target.value as any } : prev,
                 )
               }
             >
               <option value="">Select status</option>
               <option value="pending">Pending</option>
-              <option value="shipped">Shipped</option>
               <option value="delivered">Delivered</option>
-              <option value="cancelled">Cancelled</option>
-              <option value="shelved">Shelved</option>
               <option value="returned">Returned</option>
+              <option value="failed">Failed</option>
+              <option value="canceled">Canceled</option>
+              <option value="shelved">Shelved</option>
             </select>
           ) : (
             <span
