@@ -1,7 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { ExtractedOrder, GeminiResponse } from "@/lib/types";
 
-
 const EXTRACTION_PROMPT = `
 You are an order extraction AI for RachamHub, a Lagos-based logistics company.
 Extract order details from the provided text and return a valid JSON object.
@@ -30,6 +29,9 @@ Rules:
 5. If a field is not provided, use null for optional fields
 6. Ensure quantities are numbers, not strings
 7. If no total amount is provided, use 0
+8. Ensure the JSON is properly formatted and valid
+9. Ensure the quantity and total amount are not multiplied under any circumstances.
+   If the text mentions "2 items of 3", the quantity should be 2, not 6.
 
 Text to extract from:
 `;
@@ -53,8 +55,7 @@ export async function POST(request: Request) {
       return Response.json(
         {
           success: false,
-          error:
-            "Selected Gemini API key is not configured.",
+          error: "Selected Gemini API key is not configured.",
         },
         { status: 500 },
       );

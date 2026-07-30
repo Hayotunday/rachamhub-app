@@ -9,9 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { Document, Packer, Paragraph, TextRun } from "docx";
-
-const formatCurrency = (value: number) =>
-  `NGN ${Number(value || 0).toLocaleString()}`;
+import { formatCurrency } from "@/lib/utils";
 
 type Merchant = { id: string; name: string };
 
@@ -20,6 +18,7 @@ type BreakdownOrder = {
   customer_name: string;
   merchant: string | null;
   items: Array<{ name: string; quantity: number }>;
+  amount_paid?: number | null;
   total_amount: number;
   payment_to_merchant?: number | null;
   payment_to_rider?: number | null;
@@ -205,13 +204,10 @@ export default function MerchantBreakdownPage() {
       const totalOrder = orders
         .filter((o) => o.fom_delivery_status?.toLowerCase() === "delivered")
         .reduce((s, o) => s + Number(o.total_amount || 0), 0);
-      const totalDelivery = orders.reduce(
-        (s, o) => {
-          const lPrice = landmarksMap.get((o.landmark || "").toLowerCase()) || 0;
-          return s + Number(lPrice);
-        },
-        0,
-      );
+      const totalDelivery = orders.reduce((s, o) => {
+        const lPrice = landmarksMap.get((o.landmark || "").toLowerCase()) || 0;
+        return s + Number(lPrice);
+      }, 0);
       const totalBalance = totalOrder - totalDelivery;
 
       paragraphs.push(para(`Total order =${totalOrder.toLocaleString()}`));
@@ -222,7 +218,7 @@ export default function MerchantBreakdownPage() {
       paragraphs.push(blank());
       paragraphs.push(blank());
       paragraphs.push(
-        para(`Total balance= ${totalBalance.toLocaleString()}`, true),
+        para(`Total balance = ${totalBalance.toLocaleString()}`, true),
       );
       paragraphs.push(blank());
 
@@ -454,6 +450,9 @@ export default function MerchantBreakdownPage() {
                       Order Total
                     </th>
                     <th className="p-3 text-right text-xs font-semibold text-muted-foreground">
+                      Amount Paid
+                    </th>
+                    <th className="p-3 text-right text-xs font-semibold text-muted-foreground">
                       To Merchant
                     </th>
                   </tr>
@@ -510,6 +509,9 @@ export default function MerchantBreakdownPage() {
                         </td>
                         <td className="p-3 text-right font-semibold">
                           {formatCurrency(order.total_amount)}
+                        </td>
+                        <td className="p-3 text-right font-semibold">
+                          {formatCurrency(order.amount_paid ?? 0)}
                         </td>
                         <td className="p-3 text-right font-semibold text-primary">
                           {formatCurrency(order.payment_to_merchant ?? 0)}

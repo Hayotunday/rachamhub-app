@@ -17,6 +17,21 @@ export function formatDateDisplay(input: Date) {
   });
 }
 
+export const formatCurrency = (value: number) => {
+  const num = Number(value || 0);
+  const absNum = Math.abs(num);
+
+  if (absNum >= 1e9) {
+    const formatted = parseFloat((num / 1e9).toFixed(2));
+    return `₦${formatted}B`;
+  } else if (absNum >= 1e6) {
+    const formatted = parseFloat((num / 1e6).toFixed(2));
+    return `₦${formatted}M`;
+  }
+
+  return `₦${num.toLocaleString()}`;
+};
+
 const getOrders = async (startDate?: Date, endDate?: Date) => {
   let query = supabase!.from("orders").select("*");
 

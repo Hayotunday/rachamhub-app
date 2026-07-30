@@ -133,6 +133,21 @@ export default function InventoryPage() {
         getSearchableText: (row) => (row.merchant as any) || "",
       },
       {
+        key: "fom_delivery_status",
+        label: "FOM Del. Status",
+        render: (row) => (
+          <span
+            className={cn(
+              "px-2 py-0.5 rounded-full text-[10px] font-medium uppercase whitespace-nowrap",
+              STATUS_STYLES[(row.inventory_status as any) || "pending"],
+            )}
+          >
+            {(row.inventory_status as any) || "pending"}
+          </span>
+        ),
+        getSearchableText: (row) => (row.fom_delivery_status as any) || "",
+      },
+      {
         key: "inventory_status",
         label: "Inventory Del. Status",
         render: (row) =>
@@ -263,7 +278,7 @@ export default function InventoryPage() {
       },
       {
         key: "cc_comment",
-        label: "CS Comment",
+        label: "CC Comment",
         longText: true,
         render: (row) =>
           editingId === String(row.id) ? (

@@ -8,9 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabase";
-
-const formatCurrency = (value: number) =>
-  `NGN ${Number(value || 0).toLocaleString()}`;
+import { formatCurrency } from "@/lib/utils";
 
 const createSelectionId = () => Math.random().toString(36).slice(2);
 
@@ -118,10 +116,10 @@ export default function ProductBreakdownPage() {
       prev.map((selection) =>
         selection.id === id
           ? {
-              ...selection,
-              [field]: value,
-              ...(field === "merchantId" ? { productId: "" } : null),
-            }
+            ...selection,
+            [field]: value,
+            ...(field === "merchantId" ? { productId: "" } : null),
+          }
           : selection,
       ),
     );

@@ -10,8 +10,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/components/auth-context";
 import { Loader2, Users, Search, X, FileDown } from "lucide-react";
 import { Document, Packer, Paragraph, TextRun } from "docx";
-
-const formatCurrency = (v: number) => `₦${Number(v || 0).toLocaleString()}`;
+import { formatCurrency } from "@/lib/utils";
 
 interface RiderEntry {
   rider: string;
@@ -71,7 +70,7 @@ export default function RiderPaymentsPage() {
 
       for (const group of riderGroups) {
         const validStatuses = ["delivered", "failed"];
-        const docDeliveries = group.deliveries.filter((d) => 
+        const docDeliveries = group.deliveries.filter((d) =>
           validStatuses.includes(d.status.toLowerCase())
         );
 
@@ -141,10 +140,10 @@ export default function RiderPaymentsPage() {
 
       if (error) throw error;
       setOrders(data || []);
-      
+
       const { data: ridersData } = await supabase!.from("riders").select("*");
       if (ridersData) setRidersList(ridersData);
-      
+
     } catch (err) {
       toast.error("Failed to load rider data");
     } finally {
@@ -372,13 +371,12 @@ export default function RiderPaymentsPage() {
                               </td>
                               <td className="p-3">
                                 <span
-                                  className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase ${
-                                    d.isFailed || ["failed", "returned", "cancelled"].includes(d.status.toLowerCase())
+                                  className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase ${d.isFailed || ["failed", "returned", "cancelled"].includes(d.status.toLowerCase())
                                       ? "bg-red-100 text-red-700"
                                       : d.status.toLowerCase() === "delivered"
                                         ? "bg-emerald-100 text-emerald-700"
                                         : "bg-amber-100 text-amber-700"
-                                  }`}
+                                    }`}
                                 >
                                   {d.isFailed ? "Failed" : d.status}
                                 </span>

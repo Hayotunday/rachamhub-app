@@ -15,11 +15,14 @@ import {
   Layers,
   Settings,
 } from "lucide-react";
+import { useGlobalStats } from "@/hooks/use-global-stats";
+import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default function AdminDashboard() {
   const { user } = useAuth();
+  const { stats, refreshStats } = useGlobalStats();
   const [ordersCount, setOrdersCount] = useState(0);
   const [usersCount, setUsersCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -32,6 +35,7 @@ export default function AdminDashboard() {
     ]);
     setOrdersCount(orderCount ?? 0);
     setUsersCount((userData ?? []).length);
+    refreshStats();
     setLoading(false);
   }, []);
 
@@ -112,9 +116,11 @@ export default function AdminDashboard() {
                   Revenue
                 </p>
                 <p className="text-2xl font-bold text-foreground mt-2">
-                  —
+                  {formatCurrency(stats.total_revenue)}
                 </p>
-                <p className="text-xs text-muted-foreground">See Admin Orders for details</p>
+                <p className="text-xs text-muted-foreground">
+                  See Admin Orders for details
+                </p>
               </div>
               <BarChart3 className="h-6 w-6 text-green-600" />
             </div>
