@@ -139,10 +139,10 @@ export default function InventoryPage() {
           <span
             className={cn(
               "px-2 py-0.5 rounded-full text-[10px] font-medium uppercase whitespace-nowrap",
-              STATUS_STYLES[(row.inventory_status as any) || "pending"],
+              STATUS_STYLES[(row.fom_delivery_status as any) || "pending"],
             )}
           >
-            {(row.inventory_status as any) || "pending"}
+            {(row.fom_delivery_status as any) || "pending"}
           </span>
         ),
         getSearchableText: (row) => (row.fom_delivery_status as any) || "",
