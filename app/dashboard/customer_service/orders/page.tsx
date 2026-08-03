@@ -63,6 +63,7 @@ export default function OrdersPage() {
   // Pause realtime while the user is editing a row, searching or filtering
   const [realtimePaused, setRealtimePaused] = useState(false);
   const [dataLimit, setDataLimit] = useState(100);
+  const [totalCount, setTotalCount] = useState<number | null>(null);
 
   const [modalField, setModalField] = useState<
     | "customer_name"
@@ -90,7 +91,7 @@ export default function OrdersPage() {
 
       const [
         { data: merchantData },
-        { data, error: fetchError },
+        { data, count, error: fetchError },
         { data: fomUserData },
       ] = await Promise.all([
         supabase!
@@ -100,7 +101,7 @@ export default function OrdersPage() {
           .order("name"),
         supabase!
           .from("orders")
-          .select("*")
+          .select("*", { count: "exact" })
           .order("created_at", { ascending: false })
           .limit(dataLimit),
         supabase!.from("users").select("id, display_name").eq("role", "fom"),
@@ -117,6 +118,7 @@ export default function OrdersPage() {
       }
 
       setOrders((data ?? []) as Order[]);
+      setTotalCount(count ?? 0);
       if (fomUserData) setFomUsers(fomUserData);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to load orders.");
@@ -581,6 +583,7 @@ export default function OrdersPage() {
             onUserActivityChange={setRealtimePaused}
             dataLimit={dataLimit}
             onDataLimitChange={setDataLimit}
+            totalCount={totalCount ?? undefined}
           />
         </Card>
       )}

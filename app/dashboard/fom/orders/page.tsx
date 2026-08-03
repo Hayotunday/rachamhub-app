@@ -61,7 +61,7 @@ export default function FOMOrdersPage() {
 
     try {
       const [
-        { data: ordersData, error: fetchError },
+        { data: ordersData, count, error: fetchError },
         { data: merchantsData },
         { data: landmarkData },
         { data: fomUserData },
@@ -100,7 +100,7 @@ export default function FOMOrdersPage() {
         setLandmarks(landmarkData);
       }
       setOrders((ordersData ?? []) as Order[]);
-      setTotalCount(ordersData?.length ?? 0);
+      setTotalCount(count ?? 0);
       setFoms((fomUserData ?? []) as any[]);
       setCcUsers((ccUserData ?? []) as any[]);
     } catch (err) {

@@ -24,6 +24,7 @@ export default function PaymentsPage() {
   // Pause realtime while the user is searching or filtering
   const [realtimePaused, setRealtimePaused] = useState(false);
   const [dataLimit, setDataLimit] = useState(100);
+  const [totalCount, setTotalCount] = useState<number | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -31,14 +32,14 @@ export default function PaymentsPage() {
 
     try {
       const [
-        { data: ordersData, error: fetchError },
+        { data: ordersData, count, error: fetchError },
         { data: landmarksData },
         { data: fomUserData },
         { data: ccUserData },
       ] = await Promise.all([
         supabase!
           .from("orders")
-          .select("*")
+          .select("*", { count: "exact" })
           .eq("payment_confirmed", true)
           .order("updated_at", { ascending: false })
           .limit(dataLimit),
@@ -55,6 +56,7 @@ export default function PaymentsPage() {
       }
 
       setOrders((ordersData ?? []) as Order[]);
+      setTotalCount(count ?? 0);
       setLandmarks((landmarksData ?? []) as any[]);
       setFoms((fomUserData ?? []) as any[]);
       setCcUsers((ccUserData ?? []) as any[]);
@@ -275,6 +277,7 @@ export default function PaymentsPage() {
             onUserActivityChange={setRealtimePaused}
             dataLimit={dataLimit}
             onDataLimitChange={setDataLimit}
+            totalCount={totalCount ?? undefined}
           />
         </Card>
       )}

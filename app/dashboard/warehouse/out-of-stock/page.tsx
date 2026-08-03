@@ -21,6 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { Label } from "@/components/ui/label";
 
 const STATUS_STYLES: Record<string, string> = {
   pending: "bg-purple-100 text-purple-900",
@@ -52,6 +53,8 @@ export default function OutOfStockPage() {
   const [realtimePaused, setRealtimePaused] = useState(false);
   const [dataLimit, setDataLimit] = useState(100);
   const [totalCount, setTotalCount] = useState<number | null>(null);
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
 
   const startEditing = useCallback((order: Order) => {
     setEditingId(order.id);
@@ -205,16 +208,26 @@ export default function OutOfStockPage() {
     setError(null);
 
     try {
+      let ordersQuery = supabase!
+        .from("orders")
+        .select("*", { count: "exact" });
+
+      if (startDate) {
+        ordersQuery = ordersQuery.gte("created_at", `${startDate}T00:00:00Z`);
+      }
+      if (endDate) {
+        ordersQuery = ordersQuery.lte("created_at", `${endDate}T23:59:59Z`);
+      }
+
       const [
-        { data: ordersData, error: fetchError },
+        { data: ordersData, count, error: fetchError },
         { data: merchantsData },
         { data: fomUserData },
         { data: ccUserData },
       ] = await Promise.all([
-        supabase!
-          .from("orders")
-          .select("*", { count: "exact" })
+        ordersQuery
           .eq("warehouse_status", "out-of-stock")
+          .neq("status", "customer_service")
           .order("created_at", { ascending: false })
           .limit(dataLimit),
         supabase!
@@ -236,7 +249,7 @@ export default function OutOfStockPage() {
       if (fomUserData) setFomUsers(fomUserData);
       if (ccUserData) setCcUsers(ccUserData);
       setOrders((ordersData ?? []) as Order[]);
-      setTotalCount(ordersData?.length ?? 0);
+      setTotalCount(count ?? 0);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Unable to load inventory.",
@@ -244,7 +257,7 @@ export default function OutOfStockPage() {
     } finally {
       setLoading(false);
     }
-  }, [dataLimit]);
+  }, [dataLimit, startDate, endDate]);
 
   const handleSaveComment = () => {
     if (
@@ -313,16 +326,12 @@ export default function OutOfStockPage() {
   useSupabaseRealtime(
     [{ table: "orders", event: "*" }],
     fetchOrders,
-    [],
+    [startDate, endDate],
     realtimePaused,
   );
 
   const actionableOrders = useMemo(
-    () =>
-      orders.filter(
-        (order) =>
-          order.status !== "customer_service" && order.fom_assigned === null,
-      ),
+    () => orders.filter((order) => order.status !== "customer_service"),
     [orders],
   );
 
@@ -411,6 +420,41 @@ export default function OutOfStockPage() {
           </div>
         </div>
       </div>
+
+      <Card className="p-6 mb-6">
+        <div className="grid gap-4 md:grid-cols-3">
+          <div>
+            <Label>From</Label>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(event) => setStartDate(event.target.value)}
+              className="w-full"
+            />
+          </div>
+          <div>
+            <Label>To</Label>
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(event) => setEndDate(event.target.value)}
+              className="w-full"
+            />
+          </div>
+          <div className="flex items-end justify-end gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setStartDate("");
+                setEndDate("");
+              }}
+            >
+              Clear dates
+            </Button>
+            <Button onClick={fetchOrders}>Refresh</Button>
+          </div>
+        </div>
+      </Card>
 
       <Card className="p-6">
         <div className="flex justify-between items-center mb-6">

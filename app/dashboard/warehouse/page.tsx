@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 const STATUS_LABELS: Record<string, string> = {
   pending: "Pending",
@@ -61,22 +62,34 @@ export default function WarehouseOrdersPage() {
   const [realtimePaused, setRealtimePaused] = useState(false);
   const [dataLimit, setDataLimit] = useState(100);
   const [totalCount, setTotalCount] = useState<number | null>(null);
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
+      let ordersQuery = supabase!
+        .from("orders")
+        .select("*", { count: "exact" });
+
+      if (startDate) {
+        ordersQuery = ordersQuery.gte("created_at", `${startDate}T00:00:00Z`);
+      }
+      if (endDate) {
+        ordersQuery = ordersQuery.lte("created_at", `${endDate}T23:59:59Z`);
+      }
+
       const [
-        { data: ordersData, error: fetchError },
+        { data: ordersData, count, error: fetchError },
         { data: ccUserData },
         { data: merchantsData },
         { data: fomUserData },
       ] = await Promise.all([
-        supabase!
-          .from("orders")
-          .select("*", { count: "exact" })
+        ordersQuery
           .neq("warehouse_status", "out-of-stock")
+          .or("status.eq.customer_service,fom_assigned.is.null")
           .order("created_at", { ascending: false })
           .limit(dataLimit),
         supabase!
@@ -98,13 +111,13 @@ export default function WarehouseOrdersPage() {
         setMerchantOptions(merchantsData.map((m: any) => m.name));
       if (fomUserData) setFomUsers(fomUserData);
       setOrders((ordersData ?? []) as Order[]);
-      setTotalCount(ordersData?.length ?? 0);
+      setTotalCount(count ?? 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to load orders.");
     } finally {
       setLoading(false);
     }
-  }, [dataLimit]);
+  }, [dataLimit, startDate, endDate]);
 
   useEffect(() => {
     fetchOrders();
@@ -349,7 +362,7 @@ export default function WarehouseOrdersPage() {
   useSupabaseRealtime(
     [{ table: "orders", event: "*" }],
     fetchOrders,
-    [],
+    [startDate, endDate],
     realtimePaused,
   );
 
@@ -510,6 +523,41 @@ export default function WarehouseOrdersPage() {
           Pick, pack, and advance orders through the warehouse workflow.
         </p>
       </div>
+
+      <Card className="p-6">
+        <div className="grid gap-4 md:grid-cols-3">
+          <div>
+            <Label>From</Label>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(event) => setStartDate(event.target.value)}
+              className="w-full"
+            />
+          </div>
+          <div>
+            <Label>To</Label>
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(event) => setEndDate(event.target.value)}
+              className="w-full"
+            />
+          </div>
+          <div className="flex items-end justify-end gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setStartDate("");
+                setEndDate("");
+              }}
+            >
+              Clear dates
+            </Button>
+            <Button onClick={fetchOrders}>Refresh</Button>
+          </div>
+        </div>
+      </Card>
 
       <Card className="p-6 space-y-4">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">

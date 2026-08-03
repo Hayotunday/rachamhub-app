@@ -26,6 +26,7 @@ export default function InvoicesPage() {
   // Pause realtime while the user is searching or filtering
   const [realtimePaused, setRealtimePaused] = useState(false);
   const [dataLimit, setDataLimit] = useState(100);
+  const [totalCount, setTotalCount] = useState<number | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -33,14 +34,14 @@ export default function InvoicesPage() {
 
     try {
       const [
-        { data: ordersData, error: fetchError },
+        { data: ordersData, count, error: fetchError },
         { data: merchantsData },
         { data: landmarksData },
         { data: fomUserData },
       ] = await Promise.all([
         supabase!
           .from("orders")
-          .select("*")
+          .select("*", { count: "exact" })
           .eq("status", "fom")
           .neq("rider_name", null)
           .order("created_at", { ascending: false })
@@ -59,6 +60,7 @@ export default function InvoicesPage() {
       if (merchantsData)
         setMerchantOptions(merchantsData.map((m: any) => m.name));
       setOrders((ordersData ?? []) as Order[]);
+      setTotalCount(count ?? 0);
       setLandmarks((landmarksData ?? []) as any[]);
       setFoms((fomUserData ?? []) as any[]);
       console.log(fomUserData);
@@ -403,6 +405,7 @@ export default function InvoicesPage() {
             onUserActivityChange={setRealtimePaused}
             dataLimit={dataLimit}
             onDataLimitChange={setDataLimit}
+            totalCount={totalCount ?? undefined}
           />
         </Card>
       )}

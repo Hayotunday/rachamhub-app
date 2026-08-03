@@ -59,6 +59,7 @@ export default function FOMDashboard() {
   // Pause realtime while the user is editing a row, searching or filtering
   const [realtimePaused, setRealtimePaused] = useState(false);
   const [dataLimit, setDataLimit] = useState(100);
+  const [totalCount, setTotalCount] = useState<number | null>(null);
 
   const { stats, refreshStats } = useGlobalStats(user?.uid);
 
@@ -67,15 +68,16 @@ export default function FOMDashboard() {
     setLoading(true);
 
     const [
-      { data },
+      { data, count, error },
       { data: riderData },
       { data: landmarkData },
       { data: merchantData },
     ] = await Promise.all([
       supabase!
         .from("orders")
-        .select("*")
+        .select("*", { count: "exact" })
         .eq("fom_assigned", user.uid)
+        .eq("status", "warehouse")
         .order("created_at", { ascending: false })
         .limit(dataLimit),
       supabase!
@@ -95,7 +97,12 @@ export default function FOMDashboard() {
         .order("name"),
     ]);
 
+    if (error) {
+      toast.error(error.message);
+    }
+
     setOrders((data ?? []) as Order[]);
+    setTotalCount(count ?? 0);
 
     if (riderData) {
       setRiders(riderData.map((row: any) => row.name).filter(Boolean));
@@ -571,6 +578,7 @@ export default function FOMDashboard() {
           onUserActivityChange={setRealtimePaused}
           dataLimit={dataLimit}
           onDataLimitChange={setDataLimit}
+          totalCount={totalCount ?? undefined}
         />
       </Card>
 

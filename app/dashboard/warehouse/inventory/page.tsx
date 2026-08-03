@@ -56,6 +56,8 @@ export default function InventoryPage() {
   const [realtimePaused, setRealtimePaused] = useState(false);
   const [dataLimit, setDataLimit] = useState(100);
   const [totalCount, setTotalCount] = useState<number | null>(null);
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
 
   const startEditing = useCallback((order: Order) => {
     setEditingId(order.id);
@@ -307,16 +309,27 @@ export default function InventoryPage() {
     setError(null);
 
     try {
+      let ordersQuery = supabase!
+        .from("orders")
+        .select("*", { count: "exact" });
+
+      if (startDate) {
+        ordersQuery = ordersQuery.gte("created_at", `${startDate}T00:00:00Z`);
+      }
+      if (endDate) {
+        ordersQuery = ordersQuery.lte("created_at", `${endDate}T23:59:59Z`);
+      }
+
       const [
-        { data: ordersData, error: fetchError },
+        { data: ordersData, count, error: fetchError },
         { data: merchantsData },
         { data: fomUserData },
         { data: ccUserData },
       ] = await Promise.all([
-        supabase!
-          .from("orders")
-          .select("*", { count: "exact" })
+        ordersQuery
           .neq("warehouse_status", "out-of-stock")
+          .neq("status", "customer_service")
+          .not("fom_assigned", "is", null)
           .order("created_at", { ascending: false })
           .limit(dataLimit),
         supabase!
@@ -338,7 +351,7 @@ export default function InventoryPage() {
       if (fomUserData) setFomUsers(fomUserData);
       if (ccUserData) setCcUsers(ccUserData);
       setOrders((ordersData ?? []) as Order[]);
-      setTotalCount(ordersData?.length ?? 0);
+      setTotalCount(count ?? 0);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Unable to load inventory.",
@@ -346,7 +359,7 @@ export default function InventoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [dataLimit]);
+  }, [dataLimit, startDate, endDate]);
 
   const handleSaveComment = () => {
     if (
@@ -425,7 +438,7 @@ export default function InventoryPage() {
   useSupabaseRealtime(
     [{ table: "orders", event: "*" }],
     fetchOrders,
-    [],
+    [startDate, endDate],
     realtimePaused,
   );
 
@@ -530,6 +543,41 @@ export default function InventoryPage() {
           This view aggregates order item quantities so warehouse staff can
           prioritize packing.
         </p>
+      </Card>
+
+      <Card className="p-6">
+        <div className="grid gap-4 md:grid-cols-3">
+          <div>
+            <Label>From</Label>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(event) => setStartDate(event.target.value)}
+              className="w-full"
+            />
+          </div>
+          <div>
+            <Label>To</Label>
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(event) => setEndDate(event.target.value)}
+              className="w-full"
+            />
+          </div>
+          <div className="flex items-end justify-end gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setStartDate("");
+                setEndDate("");
+              }}
+            >
+              Clear dates
+            </Button>
+            <Button onClick={fetchOrders}>Refresh</Button>
+          </div>
+        </div>
       </Card>
 
       <Card className="p-6">
