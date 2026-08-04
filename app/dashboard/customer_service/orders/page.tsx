@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { Label } from "@/components/ui/label";
 import { cn, handleExport } from "@/lib/utils";
 import { ExportButton } from "@/components/export-button";
 
@@ -64,6 +65,8 @@ export default function OrdersPage() {
   const [realtimePaused, setRealtimePaused] = useState(false);
   const [dataLimit, setDataLimit] = useState(100);
   const [totalCount, setTotalCount] = useState<number | null>(null);
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
 
   const [modalField, setModalField] = useState<
     | "customer_name"
@@ -89,6 +92,17 @@ export default function OrdersPage() {
         .eq("role", "customer_service");
       if (ccUserData) setCcUsers(ccUserData);
 
+      let ordersQuery = supabase!
+        .from("orders")
+        .select("*", { count: "exact" });
+
+      if (startDate) {
+        ordersQuery = ordersQuery.gte("created_at", `${startDate}T00:00:00Z`);
+      }
+      if (endDate) {
+        ordersQuery = ordersQuery.lte("created_at", `${endDate}T23:59:59Z`);
+      }
+
       const [
         { data: merchantData },
         { data, count, error: fetchError },
@@ -99,9 +113,7 @@ export default function OrdersPage() {
           .select("name")
           .eq("is_active", true)
           .order("name"),
-        supabase!
-          .from("orders")
-          .select("*", { count: "exact" })
+        ordersQuery
           .order("created_at", { ascending: false })
           .limit(dataLimit),
         supabase!.from("users").select("id, display_name").eq("role", "fom"),
@@ -125,7 +137,7 @@ export default function OrdersPage() {
     } finally {
       setLoading(false);
     }
-  }, [dataLimit]);
+  }, [dataLimit, startDate, endDate]);
 
   useEffect(() => {
     fetchOrders();
@@ -134,7 +146,7 @@ export default function OrdersPage() {
   useSupabaseRealtime(
     [{ table: "orders", event: "*" }],
     fetchOrders,
-    [],
+    [startDate, endDate],
     realtimePaused,
   );
 
@@ -518,6 +530,41 @@ export default function OrdersPage() {
           </div>
         </div>
       </div>
+
+      <Card className="p-6">
+        <div className="grid gap-4 md:grid-cols-3">
+          <div>
+            <Label>From</Label>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(event) => setStartDate(event.target.value)}
+              className="w-full"
+            />
+          </div>
+          <div>
+            <Label>To</Label>
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(event) => setEndDate(event.target.value)}
+              className="w-full"
+            />
+          </div>
+          <div className="flex items-end justify-end gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setStartDate("");
+                setEndDate("");
+              }}
+            >
+              Clear dates
+            </Button>
+            <Button onClick={fetchOrders}>Refresh</Button>
+          </div>
+        </div>
+      </Card>
 
       {loading ? (
         <Card className="p-6 text-center">

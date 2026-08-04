@@ -11,6 +11,8 @@ import OrderSearchFilter from "@/components/order-search-filter";
 import { Button } from "@/components/ui/button";
 import { handleExport } from "@/lib/utils";
 import { ExportButton } from "@/components/export-button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function PaymentsPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -25,21 +27,32 @@ export default function PaymentsPage() {
   const [realtimePaused, setRealtimePaused] = useState(false);
   const [dataLimit, setDataLimit] = useState(100);
   const [totalCount, setTotalCount] = useState<number | null>(null);
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
+      let ordersQuery = supabase!
+        .from("orders")
+        .select("*", { count: "exact" });
+
+      if (startDate) {
+        ordersQuery = ordersQuery.gte("created_at", `${startDate}T00:00:00Z`);
+      }
+      if (endDate) {
+        ordersQuery = ordersQuery.lte("created_at", `${endDate}T23:59:59Z`);
+      }
+
       const [
         { data: ordersData, count, error: fetchError },
         { data: landmarksData },
         { data: fomUserData },
         { data: ccUserData },
       ] = await Promise.all([
-        supabase!
-          .from("orders")
-          .select("*", { count: "exact" })
+        ordersQuery
           .eq("payment_confirmed", true)
           .order("updated_at", { ascending: false })
           .limit(dataLimit),
@@ -65,7 +78,7 @@ export default function PaymentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [dataLimit]);
+  }, [dataLimit, startDate, endDate]);
 
   useEffect(() => {
     fetchData();
@@ -82,15 +95,19 @@ export default function PaymentsPage() {
       key: "payment_verified_at",
       label: "Verified At",
       render: (row) =>
-        new Date(row.payment_verified_at as string).toLocaleString([], {
-          dateStyle: "short",
-          timeStyle: "short",
-        }),
+        (row.payment_verified_at as string)
+          ? new Date(row.payment_verified_at as string).toLocaleString([], {
+              dateStyle: "short",
+              timeStyle: "short",
+            })
+          : "—",
       getSearchableText: (row) =>
-        new Date(row.payment_verified_at as string).toLocaleString([], {
-          dateStyle: "short",
-          timeStyle: "short",
-        }),
+        (row.payment_verified_at as string)
+          ? new Date(row.payment_verified_at as string).toLocaleString([], {
+              dateStyle: "short",
+              timeStyle: "short",
+            })
+          : "—",
     },
     {
       key: "delivered_at",
@@ -214,9 +231,9 @@ export default function PaymentsPage() {
   ];
 
   useSupabaseRealtime(
-    [{ table: "landmarks", event: "*" }],
+    [{ table: "orders", event: "*" }],
     fetchData,
-    [],
+    [startDate, endDate],
     realtimePaused,
   );
 
@@ -251,6 +268,41 @@ export default function PaymentsPage() {
           />
         </div>
       </div>
+
+      <Card className="p-6 mb-6">
+        <div className="grid gap-4 md:grid-cols-3">
+          <div>
+            <Label>From</Label>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(event) => setStartDate(event.target.value)}
+              className="w-full"
+            />
+          </div>
+          <div>
+            <Label>To</Label>
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(event) => setEndDate(event.target.value)}
+              className="w-full"
+            />
+          </div>
+          <div className="flex items-end justify-end gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setStartDate("");
+                setEndDate("");
+              }}
+            >
+              Clear dates
+            </Button>
+            <Button onClick={fetchData}>Refresh</Button>
+          </div>
+        </div>
+      </Card>
 
       {loading ? (
         <Card className="p-6 text-center">

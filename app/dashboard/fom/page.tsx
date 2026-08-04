@@ -27,6 +27,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +61,8 @@ export default function FOMDashboard() {
   const [realtimePaused, setRealtimePaused] = useState(false);
   const [dataLimit, setDataLimit] = useState(100);
   const [totalCount, setTotalCount] = useState<number | null>(null);
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
 
   const { stats, refreshStats } = useGlobalStats(user?.uid);
 
@@ -67,15 +70,24 @@ export default function FOMDashboard() {
     if (!user?.uid) return;
     setLoading(true);
 
+    let ordersQuery = supabase!
+      .from("orders")
+      .select("*", { count: "exact" });
+
+    if (startDate) {
+      ordersQuery = ordersQuery.gte("created_at", `${startDate}T00:00:00Z`);
+    }
+    if (endDate) {
+      ordersQuery = ordersQuery.lte("created_at", `${endDate}T23:59:59Z`);
+    }
+
     const [
       { data, count, error },
       { data: riderData },
       { data: landmarkData },
       { data: merchantData },
     ] = await Promise.all([
-      supabase!
-        .from("orders")
-        .select("*", { count: "exact" })
+      ordersQuery
         .eq("fom_assigned", user.uid)
         .eq("status", "warehouse")
         .order("created_at", { ascending: false })
@@ -117,7 +129,7 @@ export default function FOMDashboard() {
     }
 
     setLoading(false);
-  }, [user?.uid, dataLimit]);
+  }, [user?.uid, dataLimit, startDate, endDate]);
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -128,7 +140,7 @@ export default function FOMDashboard() {
   useSupabaseRealtime(
     [{ table: "orders", event: "*" }],
     fetchData,
-    [user?.uid],
+    [user?.uid, startDate, endDate],
     realtimePaused,
   );
 
@@ -563,6 +575,41 @@ export default function FOMDashboard() {
           </Card>
         </div>
       )}
+
+      <Card className="p-6 mb-6">
+        <div className="grid gap-4 md:grid-cols-3">
+          <div>
+            <Label>From</Label>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(event) => setStartDate(event.target.value)}
+              className="w-full"
+            />
+          </div>
+          <div>
+            <Label>To</Label>
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(event) => setEndDate(event.target.value)}
+              className="w-full"
+            />
+          </div>
+          <div className="flex items-end justify-end gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setStartDate("");
+                setEndDate("");
+              }}
+            >
+              Clear dates
+            </Button>
+            <Button onClick={fetchData}>Refresh</Button>
+          </div>
+        </div>
+      </Card>
 
       <Card className="p-6">
         <DataTable

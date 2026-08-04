@@ -9,6 +9,8 @@ import DataTable, { type DataTableColumn } from "@/components/data-table";
 import { Order } from "@/lib/types";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function InvoicesPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -27,21 +29,32 @@ export default function InvoicesPage() {
   const [realtimePaused, setRealtimePaused] = useState(false);
   const [dataLimit, setDataLimit] = useState(100);
   const [totalCount, setTotalCount] = useState<number | null>(null);
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
+      let ordersQuery = supabase!
+        .from("orders")
+        .select("*", { count: "exact" });
+
+      if (startDate) {
+        ordersQuery = ordersQuery.gte("created_at", `${startDate}T00:00:00Z`);
+      }
+      if (endDate) {
+        ordersQuery = ordersQuery.lte("created_at", `${endDate}T23:59:59Z`);
+      }
+
       const [
         { data: ordersData, count, error: fetchError },
         { data: merchantsData },
         { data: landmarksData },
         { data: fomUserData },
       ] = await Promise.all([
-        supabase!
-          .from("orders")
-          .select("*", { count: "exact" })
+        ordersQuery
           .eq("status", "fom")
           .neq("rider_name", null)
           .order("created_at", { ascending: false })
@@ -69,7 +82,7 @@ export default function InvoicesPage() {
     } finally {
       setLoading(false);
     }
-  }, [dataLimit]);
+  }, [dataLimit, startDate, endDate]);
 
   useEffect(() => {
     fetchData();
@@ -78,7 +91,7 @@ export default function InvoicesPage() {
   useSupabaseRealtime(
     [{ table: "orders", event: "*" }],
     fetchData,
-    [],
+    [startDate, endDate],
     realtimePaused,
   );
 
@@ -111,6 +124,7 @@ export default function InvoicesPage() {
             payment_confirmed: verify.confirmed === "true",
             status: "accounting",
             updated_at: new Date().toISOString(),
+            payment_verified_at: new Date().toISOString(),
           })
           .eq("id", orderId);
 
@@ -380,6 +394,41 @@ export default function InvoicesPage() {
           Verify payments and manage financial records for delivered orders.
         </p>
       </div>
+
+      <Card className="p-6 mb-6">
+        <div className="grid gap-4 md:grid-cols-3">
+          <div>
+            <Label>From</Label>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(event) => setStartDate(event.target.value)}
+              className="w-full"
+            />
+          </div>
+          <div>
+            <Label>To</Label>
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(event) => setEndDate(event.target.value)}
+              className="w-full"
+            />
+          </div>
+          <div className="flex items-end justify-end gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setStartDate("");
+                setEndDate("");
+              }}
+            >
+              Clear dates
+            </Button>
+            <Button onClick={fetchData}>Refresh</Button>
+          </div>
+        </div>
+      </Card>
 
       {loading ? (
         <Card className="p-12 text-center">

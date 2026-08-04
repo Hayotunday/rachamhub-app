@@ -14,6 +14,7 @@ import { cn, handleExport } from "@/lib/utils";
 import { ExportButton } from "@/components/export-button";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const STATUS_LABELS: Record<string, string> = {
   pending: "Pending",
@@ -53,6 +54,8 @@ export default function FOMOrdersPage() {
   const [realtimePaused, setRealtimePaused] = useState(false);
   const [dataLimit, setDataLimit] = useState(100);
   const [totalCount, setTotalCount] = useState<number | null>(null);
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
 
   const fetchOrders = useCallback(async () => {
     if (!user?.uid) return;
@@ -60,6 +63,17 @@ export default function FOMOrdersPage() {
     setError(null);
 
     try {
+      let ordersQuery = supabase!
+        .from("orders")
+        .select("*", { count: "exact" });
+
+      if (startDate) {
+        ordersQuery = ordersQuery.gte("created_at", `${startDate}T00:00:00Z`);
+      }
+      if (endDate) {
+        ordersQuery = ordersQuery.lte("created_at", `${endDate}T23:59:59Z`);
+      }
+
       const [
         { data: ordersData, count, error: fetchError },
         { data: merchantsData },
@@ -67,9 +81,7 @@ export default function FOMOrdersPage() {
         { data: fomUserData },
         { data: ccUserData },
       ] = await Promise.all([
-        supabase!
-          .from("orders")
-          .select("*", { count: "exact" })
+        ordersQuery
           .eq("fom_assigned", user.uid)
           .or("status.eq.fom, status.eq.accounting")
           .order("created_at", { ascending: false })
@@ -110,7 +122,7 @@ export default function FOMOrdersPage() {
     } finally {
       setLoading(false);
     }
-  }, [user?.uid, dataLimit]);
+  }, [user?.uid, dataLimit, startDate, endDate]);
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -120,7 +132,7 @@ export default function FOMOrdersPage() {
   useSupabaseRealtime(
     [{ table: "orders", event: "*" }],
     fetchOrders,
-    [user?.uid],
+    [user?.uid, startDate, endDate],
     realtimePaused,
   );
 
@@ -539,6 +551,41 @@ export default function FOMOrdersPage() {
           />
         </div>
       </div>
+
+      <Card className="p-6 mb-6">
+        <div className="grid gap-4 md:grid-cols-3">
+          <div>
+            <Label>From</Label>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(event) => setStartDate(event.target.value)}
+              className="w-full"
+            />
+          </div>
+          <div>
+            <Label>To</Label>
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(event) => setEndDate(event.target.value)}
+              className="w-full"
+            />
+          </div>
+          <div className="flex items-end justify-end gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setStartDate("");
+                setEndDate("");
+              }}
+            >
+              Clear dates
+            </Button>
+            <Button onClick={fetchOrders}>Refresh</Button>
+          </div>
+        </div>
+      </Card>
 
       <Card className="p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
