@@ -176,7 +176,12 @@ export default function FOMDashboard() {
   const handleFomSubmit = useCallback(
     async (order: Order) => {
       const inputs = rowInputs[order.id] || {};
-      if (!inputs.rider_name || !inputs.payment_to_rider || !inputs.landmark) {
+      
+      const isReturnedOrCanceled = 
+        inputs.delivery_status === "returned" || 
+        inputs.delivery_status === "canceled";
+
+      if (!isReturnedOrCanceled && (!inputs.rider_name || !inputs.payment_to_rider || !inputs.landmark)) {
         toast.info("Required fields missing", {
           description: "Rider name, rider Price, and landmark are required.",
         });
@@ -198,13 +203,13 @@ export default function FOMDashboard() {
           .from("orders")
           .update({
             status: "fom",
-            rider_name: inputs.rider_name,
+            rider_name: inputs.rider_name || null,
             payment_to_rider: riderPrice,
-            landmark: inputs.landmark,
+            landmark: inputs.landmark || null,
             payment_to_merchant: paymentByMerchant,
             fom_delivery_status: inputs.delivery_status?.toLowerCase(),
-            payment_method: inputs.payment_method?.toLowerCase(),
-            fom_comment: inputs.fom_comment,
+            payment_method: inputs.payment_method?.toLowerCase() || null,
+            fom_comment: inputs.fom_comment || null,
             updated_at: new Date().toISOString(),
             rider_assigned_at: new Date().toISOString(),
           })
@@ -459,16 +464,23 @@ export default function FOMDashboard() {
     (row: any) => {
       const orderId = String(row.id);
       const inputs = rowInputs[orderId] || {};
+      
+      const isReturnedOrCanceled = 
+        inputs.delivery_status === "returned" || 
+        inputs.delivery_status === "canceled";
+
       const isComplete = Boolean(
         inputs.rider_name && inputs.payment_to_rider && inputs.landmark,
       );
+
+      const canSubmit = isComplete || isReturnedOrCanceled;
 
       return (
         <div className="flex justify-start">
           <Button
             size="sm"
             className="h-7 px-3 text-[10px]"
-            disabled={isSubmitting === orderId || !isComplete}
+            disabled={isSubmitting === orderId || !canSubmit}
             onClick={() => {
               toast.warning(
                 "Please cross-check values. Once submitted, the order moves to accounting and cannot be edited here.",
