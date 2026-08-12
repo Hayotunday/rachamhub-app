@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSupabaseRealtime } from "@/hooks/use-supabase-realtime";
 import { useGlobalStats } from "@/hooks/use-global-stats";
 import { supabase } from "@/lib/supabase";
@@ -21,7 +21,13 @@ import { Order } from "@/lib/types";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
-import { buildCsv, cn, formatCurrency, formatDateDisplay, handleExport } from "@/lib/utils";
+import {
+  buildCsv,
+  cn,
+  formatCurrency,
+  formatDateDisplay,
+  handleExport,
+} from "@/lib/utils";
 import { ExportButton } from "@/components/export-button";
 
 export default function AdminOrdersPage() {
@@ -57,71 +63,125 @@ export default function AdminOrdersPage() {
   const [modalOrderId, setModalOrderId] = useState<string | null>(null);
   const [modalItemIndex, setModalItemIndex] = useState<number | null>(null);
 
-  const fetchOrders = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const isInitialLoad = useRef(true);
 
-    const [
-      { data: merchantData },
-      { data: riderData },
-      { data: fomUserData },
-      { data: ccUserData },
-      { data: landmarkData },
-    ] = await Promise.all([
-      supabase!
-        .from("merchants")
-        .select("name")
-        .eq("is_active", true)
-        .order("name"),
-      supabase!
-        .from("riders")
-        .select("name")
-        .eq("is_active", true)
-        .order("name"),
-      supabase!.from("users").select("id, display_name").eq("role", "fom"),
-      supabase!
-        .from("users")
-        .select("id, display_name")
-        .eq("role", "customer_service"),
-      supabase!.from("landmarks").select("*"),
-    ]);
+  const fetchOrders = useCallback(
+    async (payload?: any) => {
+      if (payload && payload.eventType) {
+        const matchFilters = (order: Order) => {
+          const createdAt = new Date(order.created_at);
+          const matchesStart =
+            !startDate || createdAt >= new Date(`${startDate}T00:00:00Z`);
+          const matchesEnd =
+            !endDate || createdAt <= new Date(`${endDate}T23:59:59Z`);
+          return matchesStart && matchesEnd;
+        };
 
-    if (fomUserData) setFomUsers(fomUserData);
-    if (ccUserData) setCcUsers(ccUserData);
-    if (landmarkData) setLandmarks(landmarkData);
-
-    if (merchantData) {
-      setMerchantOptions(
-        merchantData.map((row: any) => row.name).filter(Boolean),
-      );
-    }
-    if (riderData) {
-      setRiderOptions(riderData.map((row: any) => row.name).filter(Boolean));
-    }
-
-    try {
-      let query = supabase!
-        .from("orders")
-        .select("*", { count: "exact" })
-        .order("created_at", { ascending: false })
-        .limit(dataLimit);
-      if (startDate) {
-        query = query.gte("created_at", `${startDate}T00:00:00Z`);
-      }
-      if (endDate) {
-        query = query.lte("created_at", `${endDate}T23:59:59Z`);
+        if (payload.eventType === "INSERT") {
+          if (matchFilters(payload.new)) {
+            setOrders((prev) => {
+              if (prev.some((o) => o.id === payload.new.id)) return prev;
+              return [payload.new, ...prev];
+            });
+            setTotalCount((c) => (c !== null ? c + 1 : 1));
+          }
+        } else if (payload.eventType === "UPDATE") {
+          if (matchFilters(payload.new)) {
+            setOrders((prev) =>
+              prev.map((o) => (o.id === payload.new.id ? payload.new : o)),
+            );
+          } else {
+            setOrders((prev) => {
+              const exists = prev.some((o) => o.id === payload.new.id);
+              if (exists) {
+                setTotalCount((c) => (c !== null ? Math.max(0, c - 1) : 0));
+                return prev.filter((o) => o.id !== payload.new.id);
+              }
+              return prev;
+            });
+          }
+        } else if (payload.eventType === "DELETE") {
+          setOrders((prev) => {
+            const exists = prev.some((o) => o.id === payload.old.id);
+            if (exists) {
+              setTotalCount((c) => (c !== null ? Math.max(0, c - 1) : 0));
+              return prev.filter((o) => o.id !== payload.old.id);
+            }
+            return prev;
+          });
+        }
+        return;
       }
 
-      const { data, count, error: fetchError } = await query;
-      if (fetchError) throw fetchError;
-      setOrders((data ?? []) as Order[]);
-      setTotalCount(count ?? 0);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to load orders.");
-    } finally {
-      setLoading(false);
-    }
-  }, [endDate, startDate, dataLimit]);
+      if (isInitialLoad.current) {
+        setLoading(true);
+        isInitialLoad.current = false;
+      }
+      setError(null);
+
+      const [
+        { data: merchantData },
+        { data: riderData },
+        { data: fomUserData },
+        { data: ccUserData },
+        { data: landmarkData },
+      ] = await Promise.all([
+        supabase!
+          .from("merchants")
+          .select("name")
+          .eq("is_active", true)
+          .order("name"),
+        supabase!
+          .from("riders")
+          .select("name")
+          .eq("is_active", true)
+          .order("name"),
+        supabase!.from("users").select("id, display_name").eq("role", "fom"),
+        supabase!
+          .from("users")
+          .select("id, display_name")
+          .eq("role", "customer_service"),
+        supabase!.from("landmarks").select("*"),
+      ]);
+
+      if (fomUserData) setFomUsers(fomUserData);
+      if (ccUserData) setCcUsers(ccUserData);
+      if (landmarkData) setLandmarks(landmarkData);
+
+      if (merchantData) {
+        setMerchantOptions(
+          merchantData.map((row: any) => row.name).filter(Boolean),
+        );
+      }
+      if (riderData) {
+        setRiderOptions(riderData.map((row: any) => row.name).filter(Boolean));
+      }
+
+      try {
+        let query = supabase!
+          .from("orders")
+          .select("*", { count: "exact" })
+          .order("created_at", { ascending: false })
+          .limit(dataLimit);
+        if (startDate) {
+          query = query.gte("created_at", `${startDate}T00:00:00Z`);
+        }
+        if (endDate) {
+          query = query.lte("created_at", `${endDate}T23:59:59Z`);
+        }
+
+        const { data, count, error: fetchError } = await query;
+        if (fetchError) throw fetchError;
+        setOrders((data ?? []) as Order[]);
+        setTotalCount(count ?? 0);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unable to load orders.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [endDate, startDate, dataLimit],
+  );
 
   useEffect(() => {
     fetchOrders();
@@ -130,7 +190,7 @@ export default function AdminOrdersPage() {
   useSupabaseRealtime(
     [{ table: "orders", event: "*" }],
     fetchOrders,
-    [startDate, endDate],
+    [fetchOrders],
     realtimePaused,
   );
 
@@ -636,8 +696,9 @@ export default function AdminOrdersPage() {
           );
         },
         getSearchableText: (row) =>
-          `${fomUsers.find((u) => u.id === (row as any).fom_assigned)
-            ?.display_name
+          `${
+            fomUsers.find((u) => u.id === (row as any).fom_assigned)
+              ?.display_name
           } ${(row as any).rider_name} ${new Date(
             (row as any).rider_assigned_at,
           ).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}`,
@@ -745,6 +806,19 @@ export default function AdminOrdersPage() {
           })} ${(row as any).bank}`,
       },
       {
+        key: "amount_paid",
+        label: "Amount Paid",
+        render: (row) => {
+          const value = ((row as any).amount_paid as string) || "—";
+          return (
+            <span className="text-[9px] whitespace-normal wrap-break-word cursor-pointer py-1 leading-tight">
+              {value}
+            </span>
+          );
+        },
+        getSearchableText: (row) => `${(row as any).amount_paid as string}`,
+      },
+      {
         key: "cc_comment",
         label: "CC Note",
         render: (row) => {
@@ -833,8 +907,9 @@ export default function AdminOrdersPage() {
           </div>
         ),
         getSearchableText: (row) =>
-          `${ccUsers.find((u) => u.id === (row.extracted_by as any))
-            ?.display_name
+          `${
+            ccUsers.find((u) => u.id === (row.extracted_by as any))
+              ?.display_name
           }`,
       },
     ],
@@ -915,7 +990,10 @@ export default function AdminOrdersPage() {
       revenue: stats.total_revenue,
       owed: stats.total_owed,
       fees: stats.total_fees,
-      successRate: stats.total_orders === 0 ? 0 : Math.round((stats.delivered_orders / stats.total_orders) * 100),
+      successRate:
+        stats.total_orders === 0
+          ? 0
+          : Math.round((stats.delivered_orders / stats.total_orders) * 100),
     };
   }, [stats]);
 

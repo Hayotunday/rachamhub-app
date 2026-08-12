@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSupabaseRealtime } from "@/hooks/use-supabase-realtime";
 import { supabase } from "@/lib/supabase";
 import { Card } from "@/components/ui/card";
@@ -32,8 +32,59 @@ export default function InvoicesPage() {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+  const isInitialLoad = useRef(true);
+
+  const fetchData = useCallback(async (payload?: any) => {
+    if (payload && payload.eventType) {
+      const matchFilters = (order: Order) => {
+        const matchesStatus = order.status === "fom";
+        const matchesRider = order.rider_name !== null && order.rider_name !== "";
+        const createdAt = new Date(order.created_at);
+        const matchesStart = !startDate || createdAt >= new Date(`${startDate}T00:00:00Z`);
+        const matchesEnd = !endDate || createdAt <= new Date(`${endDate}T23:59:59Z`);
+        return matchesStatus && matchesRider && matchesStart && matchesEnd;
+      };
+
+      if (payload.eventType === "INSERT") {
+        if (matchFilters(payload.new)) {
+          setOrders((prev) => {
+            if (prev.some((o) => o.id === payload.new.id)) return prev;
+            return [payload.new, ...prev];
+          });
+          setTotalCount((c) => (c !== null ? c + 1 : 1));
+        }
+      } else if (payload.eventType === "UPDATE") {
+        if (matchFilters(payload.new)) {
+          setOrders((prev) =>
+            prev.map((o) => (o.id === payload.new.id ? payload.new : o))
+          );
+        } else {
+          setOrders((prev) => {
+            const exists = prev.some((o) => o.id === payload.new.id);
+            if (exists) {
+              setTotalCount((c) => (c !== null ? Math.max(0, c - 1) : 0));
+              return prev.filter((o) => o.id !== payload.new.id);
+            }
+            return prev;
+          });
+        }
+      } else if (payload.eventType === "DELETE") {
+        setOrders((prev) => {
+          const exists = prev.some((o) => o.id === payload.old.id);
+          if (exists) {
+            setTotalCount((c) => (c !== null ? Math.max(0, c - 1) : 0));
+            return prev.filter((o) => o.id !== payload.old.id);
+          }
+          return prev;
+        });
+      }
+      return;
+    }
+
+    if (isInitialLoad.current) {
+      setLoading(true);
+      isInitialLoad.current = false;
+    }
     setError(null);
 
     try {
@@ -76,7 +127,6 @@ export default function InvoicesPage() {
       setTotalCount(count ?? 0);
       setLandmarks((landmarksData ?? []) as any[]);
       setFoms((fomUserData ?? []) as any[]);
-      console.log(fomUserData);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to load invoices.");
     } finally {
@@ -86,12 +136,12 @@ export default function InvoicesPage() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   useSupabaseRealtime(
     [{ table: "orders", event: "*" }],
     fetchData,
-    [startDate, endDate],
+    [fetchData],
     realtimePaused,
   );
 
@@ -152,6 +202,20 @@ export default function InvoicesPage() {
         label: "Order ID",
         render: (row) => `#${String(row.id).split("-")[0]}`,
         getSearchableText: (row) => String(row.id).split("-")[0],
+      },
+      {
+        key: "created_at",
+        label: "Created At",
+        render: (row) => row.created_at as any,
+        // new Date(row.created_at as any).toLocaleString([], {
+        //   dateStyle: "short",
+        //   timeStyle: "short",
+        // }),
+        getSearchableText: (row) =>
+          new Date(row.created_at as any).toLocaleString([], {
+            dateStyle: "short",
+            timeStyle: "short",
+          }),
       },
       {
         key: "rider_assigned_at",
@@ -402,7 +466,10 @@ export default function InvoicesPage() {
             <Input
               type="date"
               value={startDate}
-              onChange={(event) => setStartDate(event.target.value)}
+              onChange={(event) => {
+                setStartDate(event.target.value);
+                console.log("start-date", event.target.value);
+              }}
               className="w-full"
             />
           </div>
@@ -411,7 +478,10 @@ export default function InvoicesPage() {
             <Input
               type="date"
               value={endDate}
-              onChange={(event) => setEndDate(event.target.value)}
+              onChange={(event) => {
+                setEndDate(event.target.value);
+                console.log("end-date", event.target.value);
+              }}
               className="w-full"
             />
           </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSupabaseRealtime } from "@/hooks/use-supabase-realtime";
 import { supabase } from "@/lib/supabase";
 import { Card } from "@/components/ui/card";
@@ -80,8 +80,57 @@ export default function OrdersPage() {
   const [modalValue, setModalValue] = useState("");
   const [modalItemIndex, setModalItemIndex] = useState<number | null>(null);
 
-  const fetchOrders = useCallback(async () => {
-    setLoading(true);
+  const isInitialLoad = useRef(true);
+
+  const fetchOrders = useCallback(async (payload?: any) => {
+    if (payload && payload.eventType) {
+      const matchFilters = (order: Order) => {
+        const createdAt = new Date(order.created_at);
+        const matchesStart = !startDate || createdAt >= new Date(`${startDate}T00:00:00Z`);
+        const matchesEnd = !endDate || createdAt <= new Date(`${endDate}T23:59:59Z`);
+        return matchesStart && matchesEnd;
+      };
+
+      if (payload.eventType === "INSERT") {
+        if (matchFilters(payload.new)) {
+          setOrders((prev) => {
+            if (prev.some((o) => o.id === payload.new.id)) return prev;
+            return [payload.new, ...prev];
+          });
+          setTotalCount((c) => (c !== null ? c + 1 : 1));
+        }
+      } else if (payload.eventType === "UPDATE") {
+        if (matchFilters(payload.new)) {
+          setOrders((prev) =>
+            prev.map((o) => (o.id === payload.new.id ? payload.new : o))
+          );
+        } else {
+          setOrders((prev) => {
+            const exists = prev.some((o) => o.id === payload.new.id);
+            if (exists) {
+              setTotalCount((c) => (c !== null ? Math.max(0, c - 1) : 0));
+              return prev.filter((o) => o.id !== payload.new.id);
+            }
+            return prev;
+          });
+        }
+      } else if (payload.eventType === "DELETE") {
+        setOrders((prev) => {
+          const exists = prev.some((o) => o.id === payload.old.id);
+          if (exists) {
+            setTotalCount((c) => (c !== null ? Math.max(0, c - 1) : 0));
+            return prev.filter((o) => o.id !== payload.old.id);
+          }
+          return prev;
+        });
+      }
+      return;
+    }
+
+    if (isInitialLoad.current) {
+      setLoading(true);
+      isInitialLoad.current = false;
+    }
     setError(null);
 
     try {
@@ -141,12 +190,12 @@ export default function OrdersPage() {
 
   useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [fetchOrders]);
 
   useSupabaseRealtime(
     [{ table: "orders", event: "*" }],
     fetchOrders,
-    [startDate, endDate],
+    [fetchOrders],
     realtimePaused,
   );
 

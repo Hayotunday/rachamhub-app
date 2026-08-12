@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/components/auth-context";
 import { useSupabaseRealtime } from "@/hooks/use-supabase-realtime";
@@ -26,9 +26,13 @@ export default function AdminDashboard() {
   const [ordersCount, setOrdersCount] = useState(0);
   const [usersCount, setUsersCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const isInitialLoad = useRef(true);
 
   const fetchAdminMetrics = useCallback(async () => {
-    setLoading(true);
+    if (isInitialLoad.current) {
+      setLoading(true);
+      isInitialLoad.current = false;
+    }
     const [{ count: orderCount }, { data: userData }] = await Promise.all([
       supabase!.from("orders").select("*", { count: "exact", head: true }),
       supabase!.from("users").select("id"),
@@ -41,7 +45,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     fetchAdminMetrics();
-  }, []);
+  }, [fetchAdminMetrics]);
 
   useSupabaseRealtime(
     [
@@ -49,7 +53,7 @@ export default function AdminDashboard() {
       { table: "users", event: "*" },
     ],
     fetchAdminMetrics,
-    [],
+    [fetchAdminMetrics],
   );
 
   return (

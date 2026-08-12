@@ -204,6 +204,27 @@ export default function DataTable({
   const [editRow, setEditRow] = useState<DataTableRow | null>(null);
   const [manualRealtimeEnabled, setManualRealtimeEnabled] = useState(true);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadMoreRef = useCallback(
+    (node: HTMLTableRowElement | null) => {
+      if (observerRef.current) observerRef.current.disconnect();
+      if (!node) return;
+
+      observerRef.current = new IntersectionObserver(
+        (entries) => {
+          if (entries[0].isIntersecting) {
+            if (totalCount !== undefined && totalCount > rows.length && onDataLimitChange) {
+              onDataLimitChange((dataLimit || rows.length) + 100);
+            }
+          }
+        },
+        { root: scrollContainerRef.current, rootMargin: "100px" }
+      );
+      observerRef.current.observe(node);
+    },
+    [totalCount, rows.length, onDataLimitChange, dataLimit]
+  );
   const topDummyScrollRef = useRef<HTMLDivElement>(null);
   const [contentWidth, setContentWidth] = useState(0);
   const [showStickyScroll, setShowStickyScroll] = useState(false);
@@ -676,20 +697,29 @@ export default function DataTable({
                   );
                 })
               )}
+              {totalCount !== undefined && rows.length < totalCount && onDataLimitChange && (
+                <TableRow ref={loadMoreRef}>
+                  <TableCell
+                    colSpan={
+                      columns.length +
+                      1 +
+                      (showActions || renderRowActions ? 1 : 0)
+                    }
+                    className="h-4 p-0 opacity-0"
+                  />
+                </TableRow>
+              )}
             </TableBody>
           </table>
         </div>
       </div>
 
-      {totalCount !== undefined && totalCount > rows.length && onDataLimitChange && (
-        <div className="flex justify-center p-4 border-t border-border bg-white rounded-b-xl">
-          <Button 
-            variant="outline" 
-            onClick={() => onDataLimitChange((dataLimit || rows.length) + 100)}
-            className="text-sm font-medium"
-          >
-            Load More (Showing {rows.length} of {totalCount})
-          </Button>
+      {totalCount !== undefined && (
+        <div className="flex justify-center p-2 border-t border-border bg-white rounded-b-xl text-xs text-muted-foreground font-medium">
+          Showing {rows.length} of {totalCount} records
+          {rows.length < totalCount && (
+            <span className="ml-1 animate-pulse">(scrolling to load more...)</span>
+          )}
         </div>
       )}
 

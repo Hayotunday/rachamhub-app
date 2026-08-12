@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/components/auth-context";
 import {
@@ -65,10 +65,61 @@ export default function FOMDashboard() {
   const [endDate, setEndDate] = useState<string>("");
 
   const { stats, refreshStats } = useGlobalStats(user?.uid);
+  const isInitialLoad = useRef(true);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (payload?: any) => {
     if (!user?.uid) return;
-    setLoading(true);
+
+    if (payload && payload.eventType) {
+      const matchFilters = (order: Order) => {
+        const matchesFom = order.fom_assigned === user.uid;
+        const matchesStatus = order.status === "warehouse";
+        const createdAt = new Date(order.created_at);
+        const matchesStart = !startDate || createdAt >= new Date(`${startDate}T00:00:00Z`);
+        const matchesEnd = !endDate || createdAt <= new Date(`${endDate}T23:59:59Z`);
+        return matchesFom && matchesStatus && matchesStart && matchesEnd;
+      };
+
+      if (payload.eventType === "INSERT") {
+        if (matchFilters(payload.new)) {
+          setOrders((prev) => {
+            if (prev.some((o) => o.id === payload.new.id)) return prev;
+            return [payload.new, ...prev];
+          });
+          setTotalCount((c) => (c !== null ? c + 1 : 1));
+        }
+      } else if (payload.eventType === "UPDATE") {
+        if (matchFilters(payload.new)) {
+          setOrders((prev) =>
+            prev.map((o) => (o.id === payload.new.id ? payload.new : o))
+          );
+        } else {
+          setOrders((prev) => {
+            const exists = prev.some((o) => o.id === payload.new.id);
+            if (exists) {
+              setTotalCount((c) => (c !== null ? Math.max(0, c - 1) : 0));
+              return prev.filter((o) => o.id !== payload.new.id);
+            }
+            return prev;
+          });
+        }
+      } else if (payload.eventType === "DELETE") {
+        setOrders((prev) => {
+          const exists = prev.some((o) => o.id === payload.old.id);
+          if (exists) {
+            setTotalCount((c) => (c !== null ? Math.max(0, c - 1) : 0));
+            return prev.filter((o) => o.id !== payload.old.id);
+          }
+          return prev;
+        });
+      }
+      return;
+    }
+
+    if (isInitialLoad.current) {
+      setLoading(true);
+      isInitialLoad.current = false;
+    }
 
     let ordersQuery = supabase!
       .from("orders")
@@ -135,12 +186,12 @@ export default function FOMDashboard() {
     if (!user?.uid) return;
 
     fetchData();
-  }, [user?.uid]);
+  }, [user?.uid, fetchData]);
 
   useSupabaseRealtime(
     [{ table: "orders", event: "*" }],
     fetchData,
-    [user?.uid, startDate, endDate],
+    [user?.uid, fetchData],
     realtimePaused,
   );
 
@@ -456,6 +507,9 @@ export default function FOMDashboard() {
     () =>
       orders
         .filter((o) => o.status === "warehouse")
+        .filter((o) => !o.rider_name)
+        .filter((o) => o.warehouse_status !== "out-of-stock")
+        .filter((o) => !o.fom_delivery_status || o.fom_delivery_status === "pending")
         .filter((o) => (filterMerchant ? o.merchant === filterMerchant : true)),
     [orders, filterMerchant],
   );

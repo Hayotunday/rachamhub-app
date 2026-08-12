@@ -25,7 +25,7 @@ interface RealtimeSubscriptionConfig {
  */
 export function useSupabaseRealtime(
   subscriptions: RealtimeSubscriptionConfig[],
-  callback: () => void | Promise<void>,
+  callback: (payload?: RealtimePostgresChangesPayload<any>) => void | Promise<void>,
   deps: React.DependencyList = [],
   paused: boolean = false,
 ) {
@@ -77,7 +77,7 @@ export function useSupabaseRealtime(
               // User is actively editing / searching — queue a refresh for later
               pendingRefreshRef.current = true;
             } else {
-              callbackRef.current();
+              callbackRef.current(_payload);
             }
           },
         )
