@@ -39,10 +39,11 @@ export default function InvoicesPage() {
       const matchFilters = (order: Order) => {
         const matchesStatus = order.status === "fom";
         const matchesRider = order.rider_name !== null && order.rider_name !== "";
+        const matchesMerchant = !filterMerchant || order.merchant === filterMerchant;
         const createdAt = new Date(order.created_at);
         const matchesStart = !startDate || createdAt >= new Date(`${startDate}T00:00:00Z`);
         const matchesEnd = !endDate || createdAt <= new Date(`${endDate}T23:59:59Z`);
-        return matchesStatus && matchesRider && matchesStart && matchesEnd;
+        return matchesStatus && matchesRider && matchesMerchant && matchesStart && matchesEnd;
       };
 
       if (payload.eventType === "INSERT") {
@@ -105,11 +106,13 @@ export default function InvoicesPage() {
         { data: landmarksData },
         { data: fomUserData },
       ] = await Promise.all([
-        ordersQuery
-          .eq("status", "fom")
-          .neq("rider_name", null)
-          .order("created_at", { ascending: false })
-          .limit(dataLimit),
+        (() => {
+          let q = ordersQuery
+            .eq("status", "fom")
+            .neq("rider_name", null);
+          if (filterMerchant) q = q.eq("merchant", filterMerchant);
+          return q.order("created_at", { ascending: false }).limit(dataLimit);
+        })(),
         supabase!
           .from("merchants")
           .select("name")
@@ -132,7 +135,7 @@ export default function InvoicesPage() {
     } finally {
       setLoading(false);
     }
-  }, [dataLimit, startDate, endDate]);
+  }, [dataLimit, startDate, endDate, filterMerchant]);
 
   useEffect(() => {
     fetchData();
@@ -439,8 +442,8 @@ export default function InvoicesPage() {
 
   const filteredOrders = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
+    // Merchant filtering is done server-side
     return orders.filter((order) => {
-      if (filterMerchant && order.merchant !== filterMerchant) return false;
       if (!term) return true;
       return (
         (order.customer_name || "").toLowerCase().includes(term) ||
@@ -448,7 +451,7 @@ export default function InvoicesPage() {
         (order.merchant || "").toLowerCase().includes(term)
       );
     });
-  }, [orders, searchTerm, filterMerchant]);
+  }, [orders, searchTerm]);
 
   return (
     <div className="space-y-6">

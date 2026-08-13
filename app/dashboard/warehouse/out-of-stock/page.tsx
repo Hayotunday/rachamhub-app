@@ -210,10 +210,11 @@ export default function OutOfStockPage() {
       const matchFilters = (order: Order) => {
         const matchesStatus = order.warehouse_status === "out-of-stock";
         const matchesCS = order.status !== "customer_service";
+        const matchesMerchant = !filterMerchant || order.merchant === filterMerchant;
         const createdAt = new Date(order.created_at);
         const matchesStart = !startDate || createdAt >= new Date(`${startDate}T00:00:00Z`);
         const matchesEnd = !endDate || createdAt <= new Date(`${endDate}T23:59:59Z`);
-        return matchesStatus && matchesCS && matchesStart && matchesEnd;
+        return matchesStatus && matchesCS && matchesMerchant && matchesStart && matchesEnd;
       };
 
       if (payload.eventType === "INSERT") {
@@ -276,11 +277,13 @@ export default function OutOfStockPage() {
         { data: fomUserData },
         { data: ccUserData },
       ] = await Promise.all([
-        ordersQuery
-          .eq("warehouse_status", "out-of-stock")
-          .neq("status", "customer_service")
-          .order("created_at", { ascending: false })
-          .limit(dataLimit),
+        (() => {
+          let q = ordersQuery
+            .eq("warehouse_status", "out-of-stock")
+            .neq("status", "customer_service");
+          if (filterMerchant) q = q.eq("merchant", filterMerchant);
+          return q.order("created_at", { ascending: false }).limit(dataLimit);
+        })(),
         supabase!
           .from("merchants")
           .select("name")
@@ -308,7 +311,7 @@ export default function OutOfStockPage() {
     } finally {
       setLoading(false);
     }
-  }, [dataLimit, startDate, endDate]);
+  }, [dataLimit, startDate, endDate, filterMerchant]);
 
   const handleSaveComment = () => {
     if (
@@ -381,15 +384,13 @@ export default function OutOfStockPage() {
     realtimePaused,
   );
 
-  const actionableOrders = useMemo(
-    () => orders.filter((order) => order.status !== "customer_service"),
-    [orders],
-  );
+  // Status filtering is done server-side
+  const actionableOrders = orders;
 
   const filteredActionableOrders = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
+    // Merchant filtering is done server-side
     return actionableOrders.filter((order) => {
-      if (filterMerchant && order.merchant !== filterMerchant) return false;
       if (!term) return true;
       return (
         (order.customer_name || "").toLowerCase().includes(term) ||
@@ -399,7 +400,7 @@ export default function OutOfStockPage() {
         (order.phone_numbers || []).join(" ").toLowerCase().includes(term)
       );
     });
-  }, [actionableOrders, searchTerm, filterMerchant]);
+  }, [actionableOrders, searchTerm]);
 
   const renderRowActions = useCallback(
     (row: any) => {

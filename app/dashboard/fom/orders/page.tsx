@@ -66,10 +66,11 @@ export default function FOMOrdersPage() {
       const matchFilters = (order: Order) => {
         const matchesFom = order.fom_assigned === user.uid;
         const matchesStatus = order.status === "fom" || order.status === "accounting";
+        const matchesMerchant = !filterMerchant || order.merchant === filterMerchant;
         const createdAt = new Date(order.created_at);
         const matchesStart = !startDate || createdAt >= new Date(`${startDate}T00:00:00Z`);
         const matchesEnd = !endDate || createdAt <= new Date(`${endDate}T23:59:59Z`);
-        return matchesFom && matchesStatus && matchesStart && matchesEnd;
+        return matchesFom && matchesStatus && matchesMerchant && matchesStart && matchesEnd;
       };
 
       if (payload.eventType === "INSERT") {
@@ -133,11 +134,13 @@ export default function FOMOrdersPage() {
         { data: fomUserData },
         { data: ccUserData },
       ] = await Promise.all([
-        ordersQuery
-          .eq("fom_assigned", user.uid)
-          .or("status.eq.fom, status.eq.accounting")
-          .order("created_at", { ascending: false })
-          .limit(dataLimit),
+        (() => {
+          let q = ordersQuery
+            .eq("fom_assigned", user.uid)
+            .or("status.eq.fom, status.eq.accounting");
+          if (filterMerchant) q = q.eq("merchant", filterMerchant);
+          return q.order("created_at", { ascending: false }).limit(dataLimit);
+        })(),
         supabase!
           .from("merchants")
           .select("name")
@@ -174,7 +177,7 @@ export default function FOMOrdersPage() {
     } finally {
       setLoading(false);
     }
-  }, [user?.uid, dataLimit, startDate, endDate]);
+  }, [user?.uid, dataLimit, startDate, endDate, filterMerchant]);
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -251,11 +254,8 @@ export default function FOMOrdersPage() {
     }
   };
 
-  const ordersByMerchant = useMemo(() => {
-    return orders.filter((order) =>
-      filterMerchant ? order.merchant === filterMerchant : true,
-    );
-  }, [orders, filterMerchant]);
+  // Merchant filtering is now done server-side in the Supabase query.
+  const ordersByMerchant = orders;
 
   const columns = useMemo<DataTableColumn[]>(
     () => [

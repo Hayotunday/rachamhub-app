@@ -85,10 +85,11 @@ export default function OrdersPage() {
   const fetchOrders = useCallback(async (payload?: any) => {
     if (payload && payload.eventType) {
       const matchFilters = (order: Order) => {
+        const matchesMerchant = !filterMerchant || order.merchant === filterMerchant;
         const createdAt = new Date(order.created_at);
         const matchesStart = !startDate || createdAt >= new Date(`${startDate}T00:00:00Z`);
         const matchesEnd = !endDate || createdAt <= new Date(`${endDate}T23:59:59Z`);
-        return matchesStart && matchesEnd;
+        return matchesMerchant && matchesStart && matchesEnd;
       };
 
       if (payload.eventType === "INSERT") {
@@ -162,9 +163,11 @@ export default function OrdersPage() {
           .select("name")
           .eq("is_active", true)
           .order("name"),
-        ordersQuery
-          .order("created_at", { ascending: false })
-          .limit(dataLimit),
+        (() => {
+          let q = ordersQuery.order("created_at", { ascending: false });
+          if (filterMerchant) q = q.eq("merchant", filterMerchant);
+          return q.limit(dataLimit);
+        })(),
         supabase!.from("users").select("id, display_name").eq("role", "fom"),
       ]);
 
@@ -186,7 +189,7 @@ export default function OrdersPage() {
     } finally {
       setLoading(false);
     }
-  }, [dataLimit, startDate, endDate]);
+  }, [dataLimit, startDate, endDate, filterMerchant]);
 
   useEffect(() => {
     fetchOrders();
@@ -201,8 +204,8 @@ export default function OrdersPage() {
 
   const filteredOrders = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
+    // Merchant filtering is done server-side
     return orders.filter((order) => {
-      if (filterMerchant && order.merchant !== filterMerchant) return false;
       if (!term) return true;
       return (
         (order.customer_name || "").toLowerCase().includes(term) ||
@@ -212,7 +215,7 @@ export default function OrdersPage() {
         (order.phone_numbers || []).join(" ").toLowerCase().includes(term)
       );
     });
-  }, [orders, searchTerm, filterMerchant]);
+  }, [orders, searchTerm]);
 
   const startEditing = useCallback((order: Order) => {
     setEditingId(order.id);

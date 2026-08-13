@@ -312,10 +312,11 @@ export default function InventoryPage() {
         const matchesStatus = order.warehouse_status !== "out-of-stock";
         const matchesCS = order.status !== "customer_service";
         const matchesFom = order.fom_assigned !== null;
+        const matchesMerchant = !filterMerchant || order.merchant === filterMerchant;
         const createdAt = new Date(order.created_at);
         const matchesStart = !startDate || createdAt >= new Date(`${startDate}T00:00:00Z`);
         const matchesEnd = !endDate || createdAt <= new Date(`${endDate}T23:59:59Z`);
-        return matchesStatus && matchesCS && matchesFom && matchesStart && matchesEnd;
+        return matchesStatus && matchesCS && matchesFom && matchesMerchant && matchesStart && matchesEnd;
       };
 
       if (payload.eventType === "INSERT") {
@@ -378,12 +379,14 @@ export default function InventoryPage() {
         { data: fomUserData },
         { data: ccUserData },
       ] = await Promise.all([
-        ordersQuery
-          .neq("warehouse_status", "out-of-stock")
-          .neq("status", "customer_service")
-          .not("fom_assigned", "is", null)
-          .order("created_at", { ascending: false })
-          .limit(dataLimit),
+        (() => {
+          let q = ordersQuery
+            .neq("warehouse_status", "out-of-stock")
+            .neq("status", "customer_service")
+            .not("fom_assigned", "is", null);
+          if (filterMerchant) q = q.eq("merchant", filterMerchant);
+          return q.order("created_at", { ascending: false }).limit(dataLimit);
+        })(),
         supabase!
           .from("merchants")
           .select("name")
@@ -411,7 +414,7 @@ export default function InventoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [dataLimit, startDate, endDate]);
+  }, [dataLimit, startDate, endDate, filterMerchant]);
 
   const handleSaveComment = () => {
     if (
@@ -509,8 +512,8 @@ export default function InventoryPage() {
 
   const filteredActionableOrders = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
+    // Merchant filtering is done server-side
     return actionableOrders.filter((order) => {
-      if (filterMerchant && order.merchant !== filterMerchant) return false;
       if (!term) return true;
       return (
         (order.customer_name || "").toLowerCase().includes(term) ||
@@ -520,7 +523,7 @@ export default function InventoryPage() {
         (order.phone_numbers || []).join(" ").toLowerCase().includes(term)
       );
     });
-  }, [actionableOrders, searchTerm, filterMerchant]);
+  }, [actionableOrders, searchTerm]);
 
   const renderRowActions = useCallback(
     (row: any) => {

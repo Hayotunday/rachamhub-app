@@ -74,10 +74,12 @@ export default function FOMDashboard() {
       const matchFilters = (order: Order) => {
         const matchesFom = order.fom_assigned === user.uid;
         const matchesStatus = order.status === "warehouse";
+        const matchesMerchant = !filterMerchant || order.merchant === filterMerchant;
+        const matchesQueue = !order.rider_name && order.warehouse_status !== "out-of-stock" && (!order.fom_delivery_status || order.fom_delivery_status === "pending");
         const createdAt = new Date(order.created_at);
         const matchesStart = !startDate || createdAt >= new Date(`${startDate}T00:00:00Z`);
         const matchesEnd = !endDate || createdAt <= new Date(`${endDate}T23:59:59Z`);
-        return matchesFom && matchesStatus && matchesStart && matchesEnd;
+        return matchesFom && matchesStatus && matchesMerchant && matchesQueue && matchesStart && matchesEnd;
       };
 
       if (payload.eventType === "INSERT") {
@@ -138,11 +140,16 @@ export default function FOMDashboard() {
       { data: landmarkData },
       { data: merchantData },
     ] = await Promise.all([
-      ordersQuery
-        .eq("fom_assigned", user.uid)
-        .eq("status", "warehouse")
-        .order("created_at", { ascending: false })
-        .limit(dataLimit),
+      (() => {
+        let q = ordersQuery
+          .eq("fom_assigned", user.uid)
+          .eq("status", "warehouse")
+          .is("rider_name", null)
+          .neq("warehouse_status", "out-of-stock")
+          .or("fom_delivery_status.is.null,fom_delivery_status.eq.pending");
+        if (filterMerchant) q = q.eq("merchant", filterMerchant);
+        return q.order("created_at", { ascending: false }).limit(dataLimit);
+      })(),
       supabase!
         .from("riders")
         .select("name")
@@ -180,7 +187,7 @@ export default function FOMDashboard() {
     }
 
     setLoading(false);
-  }, [user?.uid, dataLimit, startDate, endDate]);
+  }, [user?.uid, dataLimit, startDate, endDate, filterMerchant]);
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -503,16 +510,9 @@ export default function FOMDashboard() {
     [rowInputs, riders, landmarks, openCommentModal, updateRowInput],
   );
 
-  const actionableOrdersByMerchant = useMemo(
-    () =>
-      orders
-        .filter((o) => o.status === "warehouse")
-        .filter((o) => !o.rider_name)
-        .filter((o) => o.warehouse_status !== "out-of-stock")
-        .filter((o) => !o.fom_delivery_status || o.fom_delivery_status === "pending")
-        .filter((o) => (filterMerchant ? o.merchant === filterMerchant : true)),
-    [orders, filterMerchant],
-  );
+  // All queue + merchant filtering is now done server-side in the Supabase query,
+  // so orders already contains only the matching rows.
+  const actionableOrdersByMerchant = orders;
 
   const renderRowActions = useCallback(
     (row: any) => {

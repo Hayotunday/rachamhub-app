@@ -69,12 +69,13 @@ export default function AdminOrdersPage() {
     async (payload?: any) => {
       if (payload && payload.eventType) {
         const matchFilters = (order: Order) => {
+          const matchesMerchant = !filterMerchant || order.merchant === filterMerchant;
           const createdAt = new Date(order.created_at);
           const matchesStart =
             !startDate || createdAt >= new Date(`${startDate}T00:00:00Z`);
           const matchesEnd =
             !endDate || createdAt <= new Date(`${endDate}T23:59:59Z`);
-          return matchesStart && matchesEnd;
+          return matchesMerchant && matchesStart && matchesEnd;
         };
 
         if (payload.eventType === "INSERT") {
@@ -160,7 +161,11 @@ export default function AdminOrdersPage() {
       try {
         let query = supabase!
           .from("orders")
-          .select("*", { count: "exact" })
+          .select("*", { count: "exact" });
+        if (filterMerchant) {
+          query = query.eq("merchant", filterMerchant);
+        }
+        query = query
           .order("created_at", { ascending: false })
           .limit(dataLimit);
         if (startDate) {
@@ -180,7 +185,7 @@ export default function AdminOrdersPage() {
         setLoading(false);
       }
     },
-    [endDate, startDate, dataLimit],
+    [endDate, startDate, dataLimit, filterMerchant],
   );
 
   useEffect(() => {

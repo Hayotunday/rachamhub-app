@@ -72,10 +72,11 @@ export default function WarehouseOrdersPage() {
       const matchFilters = (order: Order) => {
         const matchesStatus = order.warehouse_status !== "out-of-stock";
         const matchesAssign = order.status === "customer_service" || !order.fom_assigned;
+        const matchesMerchant = !filterMerchant || order.merchant === filterMerchant;
         const createdAt = new Date(order.created_at);
         const matchesStart = !startDate || createdAt >= new Date(`${startDate}T00:00:00Z`);
         const matchesEnd = !endDate || createdAt <= new Date(`${endDate}T23:59:59Z`);
-        return matchesStatus && matchesAssign && matchesStart && matchesEnd;
+        return matchesStatus && matchesAssign && matchesMerchant && matchesStart && matchesEnd;
       };
 
       if (payload.eventType === "INSERT") {
@@ -138,11 +139,13 @@ export default function WarehouseOrdersPage() {
         { data: merchantsData },
         { data: fomUserData },
       ] = await Promise.all([
-        ordersQuery
-          .neq("warehouse_status", "out-of-stock")
-          .or("status.eq.customer_service,fom_assigned.is.null")
-          .order("created_at", { ascending: false })
-          .limit(dataLimit),
+        (() => {
+          let q = ordersQuery
+            .neq("warehouse_status", "out-of-stock")
+            .or("status.eq.customer_service,fom_assigned.is.null");
+          if (filterMerchant) q = q.eq("merchant", filterMerchant);
+          return q.order("created_at", { ascending: false }).limit(dataLimit);
+        })(),
         supabase!
           .from("users")
           .select("id, display_name")
@@ -168,7 +171,7 @@ export default function WarehouseOrdersPage() {
     } finally {
       setLoading(false);
     }
-  }, [dataLimit, startDate, endDate]);
+  }, [dataLimit, startDate, endDate, filterMerchant]);
 
   useEffect(() => {
     fetchOrders();
@@ -477,14 +480,8 @@ export default function WarehouseOrdersPage() {
     }
   }, [editForm, fomUsers]);
 
-  const actionableOrders = useMemo(
-    () =>
-      orders.filter(
-        (order) =>
-          order.status === "customer_service" || order.fom_assigned === null,
-      ),
-    [orders],
-  );
+  // Status filtering is already done server-side in the Supabase query.
+  const actionableOrders = orders;
 
   const canSaveWarehouseUpdate = useMemo(() => {
     if (!editForm) return false;
@@ -497,8 +494,8 @@ export default function WarehouseOrdersPage() {
 
   const filteredActionableOrders = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
+    // Merchant filtering is done server-side; only search term filtering remains client-side.
     return actionableOrders.filter((order) => {
-      if (filterMerchant && order.merchant !== filterMerchant) return false;
       if (!term) return true;
       return (
         (order.customer_name || "").toLowerCase().includes(term) ||
@@ -508,7 +505,7 @@ export default function WarehouseOrdersPage() {
         (order.phone_numbers || []).join(" ").toLowerCase().includes(term)
       );
     });
-  }, [actionableOrders, searchTerm, filterMerchant]);
+  }, [actionableOrders, searchTerm]);
 
   const renderRowActions = useCallback(
     (row: any) => {
