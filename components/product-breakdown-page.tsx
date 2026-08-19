@@ -87,7 +87,7 @@ export default function ProductBreakdownPage() {
     try {
       const { data, error } = await supabase!
         .from("orders")
-        .select("*")
+        .select("id, merchant, items, total_amount, payment_to_rider, fom_delivery_status, inventory_status, created_at, customer_name")
         .gte("created_at", start.toISOString())
         .lt("created_at", end.toISOString())
         .order("created_at", { ascending: false });

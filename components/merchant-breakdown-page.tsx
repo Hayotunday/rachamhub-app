@@ -73,7 +73,7 @@ export default function MerchantBreakdownPage() {
 
       const { data, error } = await supabase!
         .from("orders")
-        .select("*")
+        .select("id, customer_name, merchant, items, amount_paid, total_amount, payment_to_merchant, payment_to_rider, fom_delivery_status, inventory_status, rider_name, landmark, created_at, delivered_at")
         .eq("merchant", merchant.name)
         .gte("delivered_at", start.toISOString())
         .lt("delivered_at", end.toISOString())

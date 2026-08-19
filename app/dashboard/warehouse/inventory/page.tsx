@@ -364,7 +364,7 @@ export default function InventoryPage() {
     try {
       let ordersQuery = supabase!
         .from("orders")
-        .select("*", { count: "exact" });
+        .select("id, created_at, customer_name, delivery_address, phone_numbers, merchant, items, fom_delivery_status, inventory_status, warehouse_status, fom_assigned, warehouse_comment, cc_comment, status, rider_name", { count: "exact" });
 
       if (startDate) {
         ordersQuery = ordersQuery.gte("created_at", `${startDate}T00:00:00Z`);

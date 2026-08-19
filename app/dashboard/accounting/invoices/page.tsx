@@ -91,7 +91,7 @@ export default function InvoicesPage() {
     try {
       let ordersQuery = supabase!
         .from("orders")
-        .select("*", { count: "exact" });
+        .select("id, created_at, rider_assigned_at, delivered_at, customer_name, items, fom_assigned, amount_paid, total_amount, quantity_delivered, merchant, payment_to_merchant, landmark, rider_name, payment_to_rider, payment_method, bank, fom_comment, payment_confirmed, status", { count: "exact" });
 
       if (startDate) {
         ordersQuery = ordersQuery.gte("created_at", `${startDate}T00:00:00Z`);

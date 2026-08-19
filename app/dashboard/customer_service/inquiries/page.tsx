@@ -39,7 +39,7 @@ export default function InquiriesPage() {
     try {
       const { data, error: fetchError } = await supabase!
         .from("customer_inquiries")
-        .select("*")
+        .select("id, customer_name, customer_email, subject, message, status, created_at")
         .order("created_at", { ascending: false });
 
       if (fetchError) {

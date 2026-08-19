@@ -33,7 +33,7 @@ export const formatCurrency = (value: number) => {
 };
 
 const getOrders = async (startDate?: Date, endDate?: Date) => {
-  let query = supabase!.from("orders").select("*");
+  let query = supabase!.from("orders").select("id, created_at, customer_name, phone_numbers, delivery_address, items, total_amount, merchant, warehouse_status, inventory_status, fom_assigned, fom_assigned_at, rider_name, payment_to_rider, rider_assigned_at, fom_delivery_status, landmark, payment_method, bank, quantity_delivered, amount_paid, payment_confirmed, payment_verified_at, payment_to_merchant, cc_comment, warehouse_comment, fom_comment, extracted_by");
 
   if (startDate) {
     query = query.gte("created_at", startDate.toISOString());
@@ -49,9 +49,9 @@ const getOrders = async (startDate?: Date, endDate?: Date) => {
     .order("created_at", { ascending: false })
     .limit(10000);
 
-  const { data: landmarksData } = await supabase!.from("landmarks").select("*");
+  const { data: landmarksData } = await supabase!.from("landmarks").select("name, price");
 
-  return { data, fetchError, landmarks: landmarksData || [] };
+  return { data: data as Order[] | null, fetchError, landmarks: landmarksData || [] };
 };
 
 export const prepareExportData = (

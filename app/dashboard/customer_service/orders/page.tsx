@@ -144,7 +144,7 @@ export default function OrdersPage() {
 
       let ordersQuery = supabase!
         .from("orders")
-        .select("*", { count: "exact" });
+        .select("id, created_at, customer_name, delivery_address, phone_numbers, merchant, items, total_amount, cc_comment, fom_delivery_status, extracted_by, status", { count: "exact" });
 
       if (startDate) {
         ordersQuery = ordersQuery.gte("created_at", `${startDate}T00:00:00Z`);

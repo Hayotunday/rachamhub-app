@@ -51,7 +51,7 @@ export default function UserManagementPage() {
     setLoading(true);
     const { data, error } = await supabase!
       .from("users")
-      .select("*")
+      .select("id, email, display_name, role, is_active, is_deleted, created_at")
       .order("created_at", { ascending: false });
 
     if (error) toast.error("Error fetching users");

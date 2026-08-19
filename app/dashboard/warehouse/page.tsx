@@ -124,7 +124,7 @@ export default function WarehouseOrdersPage() {
     try {
       let ordersQuery = supabase!
         .from("orders")
-        .select("*", { count: "exact" });
+        .select("id, created_at, customer_name, delivery_address, phone_numbers, merchant, items, total_amount, warehouse_status, inventory_status, fom_assigned, warehouse_comment, extracted_by, status", { count: "exact" });
 
       if (startDate) {
         ordersQuery = ordersQuery.gte("created_at", `${startDate}T00:00:00Z`);

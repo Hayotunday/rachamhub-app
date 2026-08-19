@@ -98,7 +98,7 @@ export default function AdminSettingsPage() {
   const fetchMerchants = async () => {
     const { data } = await supabase!
       .from("merchants")
-      .select("*")
+      .select("id, name, is_active")
       .order("name");
     if (data) setMerchants(data);
   };
@@ -106,7 +106,7 @@ export default function AdminSettingsPage() {
   const fetchProducts = async (merchantId: string) => {
     const { data } = await supabase!
       .from("products")
-      .select("*")
+      .select("id, name, price, merchant_id")
       .eq("merchant_id", merchantId)
       .order("name");
     if (data) {
@@ -172,14 +172,14 @@ export default function AdminSettingsPage() {
   };
 
   const fetchRiders = async () => {
-    const { data } = await supabase!.from("riders").select("*").order("name");
+    const { data } = await supabase!.from("riders").select("id, name, phone, rider_type, is_active").order("name");
     if (data) setRiders(data);
   };
 
   const fetchLandmarks = async () => {
     const { data } = await supabase!
       .from("landmarks")
-      .select("*")
+      .select("id, name, price, is_active")
       .order("name");
     if (data) setLandmarks(data);
   };

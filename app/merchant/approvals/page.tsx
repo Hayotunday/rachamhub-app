@@ -33,15 +33,15 @@ export default function MerchantApprovalsPage() {
       const [merchantsRes, productsRes, stockRes] = await Promise.all([
         supabase!
           .from("merchants")
-          .select("*")
+          .select("id, name, submitted_by_role, admin_approved, warehouse_approved, customer_service_approved, approval_status")
           .eq("approval_status", "pending"),
         supabase!
           .from("products")
-          .select("*, merchants(name)")
+          .select("id, name, price, submitted_by_role, admin_approved, warehouse_approved, customer_service_approved, approval_status, merchants(name)")
           .eq("approval_status", "pending"),
         supabase!
           .from("stock_entries")
-          .select("*, products(name), merchants(name)")
+          .select("id, quantity, submitted_by_role, admin_approved, warehouse_approved, customer_service_approved, status, products(name), merchants(name)")
           .eq("status", "pending"),
       ]);
 

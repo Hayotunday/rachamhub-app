@@ -118,7 +118,7 @@ export default function FOMOrdersPage() {
     try {
       let ordersQuery = supabase!
         .from("orders")
-        .select("*", { count: "exact" });
+        .select("id, created_at, fom_assigned_at, customer_name, delivery_address, items, total_amount, rider_name, landmark, rider_assigned_at, payment_to_rider, fom_delivery_status, payment_method, bank, quantity_delivered, amount_paid, fom_comment, fom_assigned, status, merchant, payment_to_merchant, delivered_at", { count: "exact" });
 
       if (startDate) {
         ordersQuery = ordersQuery.gte("created_at", `${startDate}T00:00:00Z`);
@@ -209,9 +209,27 @@ export default function FOMOrdersPage() {
     );
     const landmarkPrice = selectedLandmark ? Number(selectedLandmark.price) : 0;
     const paymentToMerchant =
-      Number((editForm.amount_paid as any) || 0) - landmarkPrice;
-    const isDelivered =
-      editForm.fom_delivery_status?.toLowerCase() === "delivered";
+      editForm.amount_paid !== null && editForm.amount_paid !== undefined
+        ? Number(editForm.amount_paid) - landmarkPrice
+        : 0;
+
+    const originalOrder = orders.find((o) => o.id === editForm.id);
+    const wasAlreadyDelivered =
+      originalOrder?.fom_delivery_status?.toLowerCase() === "delivered" ||
+      !!originalOrder?.delivered_at;
+
+    const isNewlyDelivered =
+      editForm.fom_delivery_status?.toLowerCase() === "delivered" &&
+      !wasAlreadyDelivered;
+
+    const isNewlyFailed =
+      editForm.fom_delivery_status?.toLowerCase() === "failed" &&
+      originalOrder?.fom_delivery_status?.toLowerCase() !== "failed";
+
+    let paymentToRiderPayload = {};
+    if (isNewlyFailed) {
+      paymentToRiderPayload = { payment_to_rider: Number(originalOrder?.payment_to_rider || 0) / 2 };
+    }
 
     setIsSaving(true);
     setError(null);
@@ -228,7 +246,8 @@ export default function FOMOrdersPage() {
           fom_comment: editForm.fom_comment,
           payment_to_merchant: paymentToMerchant,
           updated_at: new Date().toISOString(),
-          ...(isDelivered ? { delivered_at: new Date().toISOString() } : {}),
+          ...paymentToRiderPayload,
+          ...(isNewlyDelivered ? { delivered_at: new Date().toISOString() } : {}),
         })
         .eq("id", editForm.id);
 

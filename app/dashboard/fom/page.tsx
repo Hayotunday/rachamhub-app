@@ -125,7 +125,7 @@ export default function FOMDashboard() {
 
     let ordersQuery = supabase!
       .from("orders")
-      .select("*", { count: "exact" });
+      .select("id, created_at, fom_assigned_at, customer_name, delivery_address, items, total_amount, rider_name, payment_to_rider, landmark, payment_method, fom_delivery_status, fom_comment, status, fom_assigned, warehouse_status, merchant", { count: "exact" });
 
     if (startDate) {
       ordersQuery = ordersQuery.gte("created_at", `${startDate}T00:00:00Z`);
@@ -248,13 +248,16 @@ export default function FOMDashboard() {
 
       setIsSubmitting(order.id);
       const riderPrice = Number(inputs.payment_to_rider) || 0;
+      const isFailed = inputs.delivery_status?.toLowerCase() === "failed";
+      const finalRiderPrice = isFailed ? riderPrice / 2 : riderPrice;
+
       const selectedLandmark = landmarks.find(
         (l) => l.name === inputs.landmark,
       );
       const landmarkPrice = selectedLandmark
         ? Number(selectedLandmark.price)
         : 0;
-      const paymentByMerchant = Number(order.total_amount) - landmarkPrice;
+      const paymentByMerchant = 0; // Remains 0 until amount_paid is set
 
       try {
         const { error } = await supabase!
@@ -262,7 +265,7 @@ export default function FOMDashboard() {
           .update({
             status: "fom",
             rider_name: inputs.rider_name || null,
-            payment_to_rider: riderPrice,
+            payment_to_rider: finalRiderPrice,
             landmark: inputs.landmark || null,
             payment_to_merchant: paymentByMerchant,
             fom_delivery_status: inputs.delivery_status?.toLowerCase(),

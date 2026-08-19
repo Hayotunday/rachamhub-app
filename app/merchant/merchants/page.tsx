@@ -67,7 +67,7 @@ export default function MerchantsProductsPage() {
     setLoading(true);
     const { data } = await supabase!
       .from("merchants")
-      .select("*")
+      .select("id, name, approval_status, created_at")
       .order("created_at", { ascending: false });
     if (data) {
       setMerchants(data);
@@ -90,7 +90,7 @@ export default function MerchantsProductsPage() {
   const fetchProducts = async (merchantId: string) => {
     const { data } = await supabase!
       .from("products")
-      .select("*")
+      .select("id, name, price, approval_status, merchant_id, created_at")
       .eq("merchant_id", merchantId)
       .order("created_at", { ascending: false });
     if (data) {

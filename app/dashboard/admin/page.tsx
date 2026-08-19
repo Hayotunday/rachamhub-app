@@ -34,7 +34,7 @@ export default function AdminDashboard() {
       isInitialLoad.current = false;
     }
     const [{ count: orderCount }, { data: userData }] = await Promise.all([
-      supabase!.from("orders").select("*", { count: "exact", head: true }),
+      supabase!.from("orders").select("id", { count: "exact", head: true }),
       supabase!.from("users").select("id"),
     ]);
     setOrdersCount(orderCount ?? 0);

@@ -132,7 +132,7 @@ export default function RiderPaymentsPage() {
 
       const { data, error } = await supabase!
         .from("orders")
-        .select("*")
+        .select("id, rider_name, fom_delivery_status, payment_to_rider, customer_name, landmark, delivery_address, rider_assigned_at")
         .not("rider_name", "is", null)
         .gte("rider_assigned_at", startOfDay.toISOString())
         .lt("rider_assigned_at", endOfDay.toISOString())
@@ -141,7 +141,7 @@ export default function RiderPaymentsPage() {
       if (error) throw error;
       setOrders(data || []);
 
-      const { data: ridersData } = await supabase!.from("riders").select("*");
+      const { data: ridersData } = await supabase!.from("riders").select("name, rider_type");
       if (ridersData) setRidersList(ridersData);
 
     } catch (err) {

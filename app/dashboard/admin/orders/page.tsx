@@ -161,7 +161,7 @@ export default function AdminOrdersPage() {
       try {
         let query = supabase!
           .from("orders")
-          .select("*", { count: "exact" });
+          .select("id, created_at, customer_name, delivery_address, phone_numbers, merchant, items, total_amount, payment_to_rider, warehouse_status, inventory_status, fom_delivery_status, fom_assigned, rider_name, rider_assigned_at, payment_method, payment_confirmed, payment_verified_at, bank, landmark, warehouse_comment, cc_comment, fom_comment, updated_at", { count: "exact" });
         if (filterMerchant) {
           query = query.eq("merchant", filterMerchant);
         }
