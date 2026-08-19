@@ -54,8 +54,10 @@ export default function InventoryPage() {
   const { user } = useAuth();
   // Pause realtime while the user is editing a row, searching or filtering
   const [realtimePaused, setRealtimePaused] = useState(false);
-  const [dataLimit, setDataLimit] = useState(100);
+  const [page, setPage] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [totalCount, setTotalCount] = useState<number | null>(null);
+  const PAGE_SIZE = 100;
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
 
@@ -385,7 +387,7 @@ export default function InventoryPage() {
             .neq("status", "customer_service")
             .not("fom_assigned", "is", null);
           if (filterMerchant) q = q.eq("merchant", filterMerchant);
-          return q.order("created_at", { ascending: false }).limit(dataLimit);
+          return q.order("created_at", { ascending: false }).range(0, PAGE_SIZE - 1);
         })(),
         supabase!
           .from("merchants")
@@ -414,7 +416,7 @@ export default function InventoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [dataLimit, startDate, endDate, filterMerchant]);
+  }, [startDate, endDate, filterMerchant]);
 
   const handleSaveComment = () => {
     if (
@@ -656,8 +658,25 @@ export default function InventoryPage() {
             showActions
             renderRowActions={renderRowActions}
             onUserActivityChange={setRealtimePaused}
-            dataLimit={dataLimit}
-            onDataLimitChange={setDataLimit}
+            onLoadMore={async () => {
+                const nextPage = page + 1;
+                setLoadingMore(true);
+                const from = nextPage * PAGE_SIZE;
+                const to = from + PAGE_SIZE - 1;
+                let q = supabase!.from("orders").select("id, created_at, customer_name, delivery_address, phone_numbers, merchant, items, fom_delivery_status, inventory_status, warehouse_status, fom_assigned, warehouse_comment, cc_comment, status, rider_name")
+                  .neq("warehouse_status", "out-of-stock")
+                  .neq("status", "customer_service")
+                  .not("fom_assigned", "is", null)
+                  .order("created_at", { ascending: false })
+                  .range(from, to);
+                if (filterMerchant) q = q.eq("merchant", filterMerchant);
+                if (startDate) q = q.gte("created_at", `${startDate}T00:00:00Z`);
+                if (endDate) q = q.lte("created_at", `${endDate}T23:59:59Z`);
+                const { data } = await q;
+                if (data) { setOrders(prev => [...prev, ...data as Order[]]); setPage(nextPage); }
+                setLoadingMore(false);
+              }}
+              loadingMore={loadingMore}
             totalCount={totalCount ?? undefined}
           />
         </div>

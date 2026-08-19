@@ -60,8 +60,10 @@ export default function WarehouseOrdersPage() {
   const [merchantOptions, setMerchantOptions] = useState<string[]>([]);
   // Pause realtime while the user is editing a row, searching or filtering
   const [realtimePaused, setRealtimePaused] = useState(false);
-  const [dataLimit, setDataLimit] = useState(100);
+  const [page, setPage] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [totalCount, setTotalCount] = useState<number | null>(null);
+  const PAGE_SIZE = 100;
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
 
@@ -144,7 +146,7 @@ export default function WarehouseOrdersPage() {
             .neq("warehouse_status", "out-of-stock")
             .or("status.eq.customer_service,fom_assigned.is.null");
           if (filterMerchant) q = q.eq("merchant", filterMerchant);
-          return q.order("created_at", { ascending: false }).limit(dataLimit);
+          return q.order("created_at", { ascending: false }).range(0, PAGE_SIZE - 1);
         })(),
         supabase!
           .from("users")
@@ -166,12 +168,13 @@ export default function WarehouseOrdersPage() {
       if (fomUserData) setFomUsers(fomUserData);
       setOrders((ordersData ?? []) as Order[]);
       setTotalCount(count ?? 0);
+      setPage(0);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to load orders.");
     } finally {
       setLoading(false);
     }
-  }, [dataLimit, startDate, endDate, filterMerchant]);
+  }, [startDate, endDate, filterMerchant]);
 
   useEffect(() => {
     fetchOrders();
@@ -647,8 +650,24 @@ export default function WarehouseOrdersPage() {
               showActions
               renderRowActions={renderRowActions}
               onUserActivityChange={setRealtimePaused}
-              dataLimit={dataLimit}
-              onDataLimitChange={setDataLimit}
+              onLoadMore={async () => {
+                const nextPage = page + 1;
+                setLoadingMore(true);
+                const from = nextPage * PAGE_SIZE;
+                const to = from + PAGE_SIZE - 1;
+                let q = supabase!.from("orders").select("id, created_at, customer_name, delivery_address, phone_numbers, merchant, items, total_amount, warehouse_status, inventory_status, fom_assigned, warehouse_comment, extracted_by, status")
+                  .neq("warehouse_status", "out-of-stock")
+                  .or("status.eq.customer_service,fom_assigned.is.null")
+                  .order("created_at", { ascending: false })
+                  .range(from, to);
+                if (filterMerchant) q = q.eq("merchant", filterMerchant);
+                if (startDate) q = q.gte("created_at", `${startDate}T00:00:00Z`);
+                if (endDate) q = q.lte("created_at", `${endDate}T23:59:59Z`);
+                const { data } = await q;
+                if (data) { setOrders(prev => [...prev, ...data as Order[]]); setPage(nextPage); }
+                setLoadingMore(false);
+              }}
+              loadingMore={loadingMore}
               totalCount={totalCount ?? undefined}
             />
           </div>

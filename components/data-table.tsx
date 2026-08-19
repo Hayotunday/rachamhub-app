@@ -30,6 +30,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import OrderSearchFilter from "@/components/order-search-filter";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { useDebounce } from "@/hooks/use-debounce";
 
 export type DataTableCellValue =
   | string
@@ -92,11 +94,12 @@ interface DataTableProps {
    * being interacted with, then resume once they are done.
    */
   onUserActivityChange?: (active: boolean) => void;
-  /** The number of rows to request from the server. Displayed in the search bar as a limit selector. */
-  dataLimit?: number;
-  onDataLimitChange?: (limit: number) => void;
   /** Total count of matching records in the database (may exceed the fetched rows). */
   totalCount?: number;
+  /** Called when the user clicks "Load More" — the parent fetches the next page and appends. */
+  onLoadMore?: () => void;
+  /** Whether more rows are currently being loaded (shows a spinner on the button). */
+  loadingMore?: boolean;
 }
 
 type DialogContext = {
@@ -190,9 +193,9 @@ export default function DataTable({
   onFilterMerchantChange = () => {},
   renderRowActions,
   onUserActivityChange,
-  dataLimit,
-  onDataLimitChange,
   totalCount,
+  onLoadMore,
+  loadingMore = false,
 }: DataTableProps) {
   const columns = useMemo(() => headers.map(normalizeColumn), [headers]);
   const serialColumnWidth = "64px";
@@ -218,6 +221,10 @@ export default function DataTable({
       ]),
     ),
   );
+
+  // Debounce both search inputs — avoids filtering on every keystroke
+  const debouncedSearch = useDebounce(searchText, 300);
+  const debouncedSecondarySearch = useDebounce(secondarySearchText, 300);
 
   // Synchronize content width and detect if horizontal scroll is needed
   const updateScrollDimensions = useCallback(() => {
@@ -323,22 +330,35 @@ export default function DataTable({
     };
   }, []);
 
+  // Filter using debounced values so the list only re-computes after user pauses
   const filteredRows = useMemo(() => {
     let result = tableRows;
-    if (searchText.trim()) {
-      const query = searchText.trim().toLowerCase();
+    if (debouncedSearch.trim()) {
+      const query = debouncedSearch.trim().toLowerCase();
       result = result.filter((row) =>
         makeSearchString(row, columns).includes(query),
       );
     }
-    if (secondarySearchText.trim()) {
-      const query = secondarySearchText.trim().toLowerCase();
+    if (debouncedSecondarySearch.trim()) {
+      const query = debouncedSecondarySearch.trim().toLowerCase();
       result = result.filter((row) =>
         makeSearchString(row, columns).includes(query),
       );
     }
     return result;
-  }, [columns, searchText, secondarySearchText, tableRows]);
+  }, [columns, debouncedSearch, debouncedSecondarySearch, tableRows]);
+
+  // ---------- Row virtualization ----------
+  // The virtualizer renders only the rows visible in the scroll container
+  // plus a small overscan buffer, keeping the DOM lean regardless of list size.
+  const rowVirtualizer = useVirtualizer({
+    count: filteredRows.length,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: () => 48,
+    overscan: 10,
+  });
+  const virtualItems = rowVirtualizer.getVirtualItems();
+  const totalVirtualHeight = rowVirtualizer.getTotalSize();
 
   // ---------- activity-aware edit / search helpers ----------
 
@@ -502,6 +522,11 @@ export default function DataTable({
     return displayContent;
   };
 
+  const hasMore =
+    onLoadMore !== undefined &&
+    totalCount !== undefined &&
+    totalCount > rows.length;
+
   return (
     <div className="space-y-4">
       {title && <h2 className="text-lg font-semibold">{title}</h2>}
@@ -517,8 +542,6 @@ export default function DataTable({
           merchantOptions={merchantOptions}
           filterMerchant={filterMerchant}
           onFilterMerchantChange={handleMerchantFilterChange}
-          dataLimit={dataLimit}
-          onDataLimitChange={onDataLimitChange}
           realtimeEnabled={manualRealtimeEnabled}
           onRealtimeToggle={
             onUserActivityChange ? setManualRealtimeEnabled : undefined
@@ -527,18 +550,7 @@ export default function DataTable({
       ) : null}
 
       <div className="relative border rounded-md bg-background h-110 flex flex-col overflow-hidden shadow-sm">
-        {/* Top Sticky Horizontal Scrollbar 
-        {showStickyScroll && (
-          <div
-            ref={topDummyScrollRef}
-            onScroll={handleTopDummyScroll}
-            className="overflow-x-auto z-40 bg-background border-b border-border h-3 w-full shrink-0 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:bg-muted-foreground/20 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/30"
-          >
-            <div style={{ width: contentWidth, height: "1px" }} />
-          </div>
-        )}
-        */}
-
+        {/* Virtualized scroll container */}
         <div
           ref={scrollContainerRef}
           onScroll={handleMainScroll}
@@ -593,6 +605,7 @@ export default function DataTable({
                 ) : null}
               </TableRow>
             </thead>
+
             <TableBody>
               {filteredRows.length === 0 ? (
                 <TableRow>
@@ -608,88 +621,113 @@ export default function DataTable({
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredRows.map((row, rowIndex) => {
-                  const isEditing = editingIndex === rowIndex;
-                  const rowId = row[rowKey] ?? rowIndex;
-                  return (
-                    <TableRow
-                      key={String(rowId)}
-                      className="hover:bg-muted/20 transition-colors border-b border-border group"
-                    >
-                      <TableCell
-                        style={{
-                          width: serialColumnWidth,
-                          minWidth: serialColumnWidth,
-                        }}
-                        className="border-r border-border py-1.5 px-3 group-hover:bg-transparent bg-white text-xs font-semibold text-muted-foreground"
+                <>
+                  {/* Spacer row that pads the top of the virtual list */}
+                  {virtualItems.length > 0 && virtualItems[0].start > 0 && (
+                    <tr style={{ height: virtualItems[0].start }} aria-hidden />
+                  )}
+                  {virtualItems.map((virtualRow) => {
+                    const row = filteredRows[virtualRow.index];
+                    const rowIndex = virtualRow.index;
+                    const isEditing = editingIndex === rowIndex;
+                    const rowId = row[rowKey] ?? rowIndex;
+                    return (
+                      <TableRow
+                        key={String(rowId)}
+                        data-index={virtualRow.index}
+                        ref={rowVirtualizer.measureElement}
+                        className="hover:bg-muted/20 transition-colors border-b border-border group"
                       >
-                        {rowIndex + 1}
-                      </TableCell>
-                      {columns.map((column) => (
                         <TableCell
-                          key={`${String(rowId)}-${column.key}`}
                           style={{
-                            width: columnWidths[column.key],
-                            minWidth: "80px",
+                            width: serialColumnWidth,
+                            minWidth: serialColumnWidth,
                           }}
-                          className="border-r border-border py-1.5 px-3 group-hover:bg-transparent bg-white overflow-hidden max-w-0 wrap-anywhere whitespace-normal"
+                          className="border-r border-border py-1.5 px-3 group-hover:bg-transparent bg-white text-xs font-semibold text-muted-foreground"
                         >
-                          {renderCellContent(row, column, rowIndex, isEditing)}
+                          {rowIndex + 1}
                         </TableCell>
-                      ))}
-                      {renderRowActions ? (
-                        <TableCell className="text-left bg-white group-hover:bg-transparent border-r border-border w-24">
-                          {renderRowActions(row, rowIndex, isEditing, editRow)}
-                        </TableCell>
-                      ) : showActions ? (
-                        <TableCell className="text-left bg-white group-hover:bg-transparent border-r border-border w-24">
-                          {isEditing ? (
-                            <div className="flex justify-start gap-2">
-                              <Button
-                                size="icon-sm"
-                                variant="ghost"
-                                onClick={saveEdit}
-                              >
-                                <Check className="h-4 w-4 text-emerald-500" />
-                              </Button>
-                              <Button
-                                size="icon-sm"
-                                variant="ghost"
-                                onClick={cancelEditing}
-                              >
-                                <X className="h-4 w-4 text-red-600" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <div className="flex justify-start gap-2">
-                              <Button
-                                size="icon-sm"
-                                variant="ghost"
-                                onClick={() => startEditing(rowIndex)}
-                              >
-                                <Edit2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          )}
-                        </TableCell>
-                      ) : null}
-                    </TableRow>
-                  );
-                })
+                        {columns.map((column) => (
+                          <TableCell
+                            key={`${String(rowId)}-${column.key}`}
+                            style={{
+                              width: columnWidths[column.key],
+                              minWidth: "80px",
+                            }}
+                            className="border-r border-border py-1.5 px-3 group-hover:bg-transparent bg-white overflow-hidden max-w-0 wrap-anywhere whitespace-normal"
+                          >
+                            {renderCellContent(row, column, rowIndex, isEditing)}
+                          </TableCell>
+                        ))}
+                        {renderRowActions ? (
+                          <TableCell className="text-left bg-white group-hover:bg-transparent border-r border-border w-24">
+                            {renderRowActions(row, rowIndex, isEditing, editRow)}
+                          </TableCell>
+                        ) : showActions ? (
+                          <TableCell className="text-left bg-white group-hover:bg-transparent border-r border-border w-24">
+                            {isEditing ? (
+                              <div className="flex justify-start gap-2">
+                                <Button
+                                  size="icon-sm"
+                                  variant="ghost"
+                                  onClick={saveEdit}
+                                >
+                                  <Check className="h-4 w-4 text-emerald-500" />
+                                </Button>
+                                <Button
+                                  size="icon-sm"
+                                  variant="ghost"
+                                  onClick={cancelEditing}
+                                >
+                                  <X className="h-4 w-4 text-red-600" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="flex justify-start gap-2">
+                                <Button
+                                  size="icon-sm"
+                                  variant="ghost"
+                                  onClick={() => startEditing(rowIndex)}
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )}
+                          </TableCell>
+                        ) : null}
+                      </TableRow>
+                    );
+                  })}
+                  {/* Bottom spacer to maintain correct scroll height */}
+                  {virtualItems.length > 0 && (
+                    <tr
+                      style={{
+                        height:
+                          totalVirtualHeight -
+                          (virtualItems[virtualItems.length - 1].end ?? 0),
+                      }}
+                      aria-hidden
+                    />
+                  )}
+                </>
               )}
             </TableBody>
           </table>
         </div>
       </div>
 
-      {totalCount !== undefined && totalCount > rows.length && onDataLimitChange && (
+      {/* Load More — only shown when parent has more rows to fetch */}
+      {hasMore && (
         <div className="flex justify-center p-4 border-t border-border bg-white rounded-b-xl">
-          <Button 
-            variant="outline" 
-            onClick={() => onDataLimitChange((dataLimit || rows.length) + 100)}
+          <Button
+            variant="outline"
+            onClick={onLoadMore}
+            disabled={loadingMore}
             className="text-sm font-medium"
           >
-            Load More (Showing {rows.length} of {totalCount})
+            {loadingMore
+              ? "Loading…"
+              : `Load More (Showing ${rows.length} of ${totalCount})`}
           </Button>
         </div>
       )}

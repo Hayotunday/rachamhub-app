@@ -25,8 +25,10 @@ export default function PaymentsPage() {
   const [error, setError] = useState<string | null>(null);
   // Pause realtime while the user is searching or filtering
   const [realtimePaused, setRealtimePaused] = useState(false);
-  const [dataLimit, setDataLimit] = useState(100);
+  const [page, setPage] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [totalCount, setTotalCount] = useState<number | null>(null);
+  const PAGE_SIZE = 100;
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
 
@@ -106,7 +108,7 @@ export default function PaymentsPage() {
         (() => {
           let q = ordersQuery.eq("payment_confirmed", true);
           if (filterMerchant) q = q.eq("merchant", filterMerchant);
-          return q.order("updated_at", { ascending: false }).limit(dataLimit);
+          return q.order("updated_at", { ascending: false }).range(0, PAGE_SIZE - 1);
         })(),
         supabase!.from("landmarks").select("*").eq("is_active", true),
         supabase!.from("users").select("id, display_name").eq("role", "fom"),
@@ -130,7 +132,7 @@ export default function PaymentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [dataLimit, startDate, endDate, filterMerchant]);
+  }, [startDate, endDate, filterMerchant]);
 
   useEffect(() => {
     fetchData();
@@ -379,8 +381,24 @@ export default function PaymentsPage() {
             filterMerchant={filterMerchant}
             onFilterMerchantChange={setFilterMerchant}
             onUserActivityChange={setRealtimePaused}
-            dataLimit={dataLimit}
-            onDataLimitChange={setDataLimit}
+            onLoadMore={async () => {
+              const nextPage = page + 1;
+              setLoadingMore(true);
+              const from = nextPage * PAGE_SIZE;
+              const to = from + PAGE_SIZE - 1;
+              let q = supabase!.from("orders")
+                .select("id, payment_verified_at, delivered_at, customer_name, fom_assigned, amount_paid, total_amount, quantity_delivered, merchant, payment_to_merchant, landmark, rider_name, payment_to_rider, bank, payment_method, fom_comment, created_at, payment_confirmed")
+                .eq("payment_confirmed", true)
+                .order("updated_at", { ascending: false })
+                .range(from, to);
+              if (filterMerchant) q = q.eq("merchant", filterMerchant);
+              if (startDate) q = q.gte("created_at", `${startDate}T00:00:00Z`);
+              if (endDate) q = q.lte("created_at", `${endDate}T23:59:59Z`);
+              const { data } = await q;
+              if (data) { setOrders(prev => [...prev, ...data as Order[]]); setPage(nextPage); }
+              setLoadingMore(false);
+            }}
+            loadingMore={loadingMore}
             totalCount={totalCount ?? undefined}
           />
         </Card>

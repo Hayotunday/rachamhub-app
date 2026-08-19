@@ -53,8 +53,10 @@ export default function AdminOrdersPage() {
 
   // Pause realtime while the user is editing a row, searching or filtering
   const [realtimePaused, setRealtimePaused] = useState(false);
-  const [dataLimit, setDataLimit] = useState(100);
+  const [page, setPage] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [totalCount, setTotalCount] = useState<number | null>(null);
+  const PAGE_SIZE = 100;
 
   // Modal states for long text fields
   const [modalOpen, setModalOpen] = useState(false);
@@ -165,27 +167,28 @@ export default function AdminOrdersPage() {
         if (filterMerchant) {
           query = query.eq("merchant", filterMerchant);
         }
-        query = query
-          .order("created_at", { ascending: false })
-          .limit(dataLimit);
+        query = query.order("created_at", { ascending: false });
         if (startDate) {
           query = query.gte("created_at", `${startDate}T00:00:00Z`);
         }
         if (endDate) {
           query = query.lte("created_at", `${endDate}T23:59:59Z`);
         }
+        const currentPage = 0;
+        query = query.range(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE - 1);
 
         const { data, count, error: fetchError } = await query;
         if (fetchError) throw fetchError;
         setOrders((data ?? []) as Order[]);
         setTotalCount(count ?? 0);
+        setPage(0);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unable to load orders.");
       } finally {
         setLoading(false);
       }
     },
-    [endDate, startDate, dataLimit, filterMerchant],
+    [endDate, startDate, filterMerchant],
   );
 
   useEffect(() => {
@@ -1119,8 +1122,23 @@ export default function AdminOrdersPage() {
             showActions
             renderRowActions={renderRowActions}
             onUserActivityChange={setRealtimePaused}
-            dataLimit={dataLimit}
-            onDataLimitChange={setDataLimit}
+            onLoadMore={async () => {
+              const nextPage = page + 1;
+              setLoadingMore(true);
+              const from = nextPage * PAGE_SIZE;
+              const to = from + PAGE_SIZE - 1;
+              let q = supabase!.from("orders")
+                .select("id, created_at, customer_name, delivery_address, phone_numbers, merchant, items, total_amount, payment_to_rider, warehouse_status, inventory_status, fom_delivery_status, fom_assigned, rider_name, rider_assigned_at, payment_method, payment_confirmed, payment_verified_at, bank, landmark, warehouse_comment, cc_comment, fom_comment, updated_at")
+                .order("created_at", { ascending: false })
+                .range(from, to);
+              if (filterMerchant) q = q.eq("merchant", filterMerchant);
+              if (startDate) q = q.gte("created_at", `${startDate}T00:00:00Z`);
+              if (endDate) q = q.lte("created_at", `${endDate}T23:59:59Z`);
+              const { data } = await q;
+              if (data) { setOrders(prev => [...prev, ...data as Order[]]); setPage(nextPage); }
+              setLoadingMore(false);
+            }}
+            loadingMore={loadingMore}
             totalCount={totalCount ?? undefined}
           />
         </Card>

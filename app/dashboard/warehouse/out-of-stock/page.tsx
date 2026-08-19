@@ -51,8 +51,10 @@ export default function OutOfStockPage() {
   const [merchantOptions, setMerchantOptions] = useState<string[]>([]);
   // Pause realtime while the user is editing a row, searching or filtering
   const [realtimePaused, setRealtimePaused] = useState(false);
-  const [dataLimit, setDataLimit] = useState(100);
+  const [page, setPage] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [totalCount, setTotalCount] = useState<number | null>(null);
+  const PAGE_SIZE = 100;
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
 
@@ -282,7 +284,7 @@ export default function OutOfStockPage() {
             .eq("warehouse_status", "out-of-stock")
             .neq("status", "customer_service");
           if (filterMerchant) q = q.eq("merchant", filterMerchant);
-          return q.order("created_at", { ascending: false }).limit(dataLimit);
+          return q.order("created_at", { ascending: false }).range(0, PAGE_SIZE - 1);
         })(),
         supabase!
           .from("merchants")
@@ -311,7 +313,7 @@ export default function OutOfStockPage() {
     } finally {
       setLoading(false);
     }
-  }, [dataLimit, startDate, endDate, filterMerchant]);
+  }, [startDate, endDate, filterMerchant]);
 
   const handleSaveComment = () => {
     if (
@@ -529,8 +531,24 @@ export default function OutOfStockPage() {
             showActions
             renderRowActions={renderRowActions}
             onUserActivityChange={setRealtimePaused}
-            dataLimit={dataLimit}
-            onDataLimitChange={setDataLimit}
+            onLoadMore={async () => {
+                const nextPage = page + 1;
+                setLoadingMore(true);
+                const from = nextPage * PAGE_SIZE;
+                const to = from + PAGE_SIZE - 1;
+                let q = supabase!.from("orders").select("id, created_at, customer_name, delivery_address, merchant, items, warehouse_status, fom_assigned, warehouse_comment, status")
+                  .eq("warehouse_status", "out-of-stock")
+                  .neq("status", "customer_service")
+                  .order("created_at", { ascending: false })
+                  .range(from, to);
+                if (filterMerchant) q = q.eq("merchant", filterMerchant);
+                if (startDate) q = q.gte("created_at", `${startDate}T00:00:00Z`);
+                if (endDate) q = q.lte("created_at", `${endDate}T23:59:59Z`);
+                const { data } = await q;
+                if (data) { setOrders(prev => [...prev, ...data as Order[]]); setPage(nextPage); }
+                setLoadingMore(false);
+              }}
+              loadingMore={loadingMore}
             totalCount={totalCount ?? undefined}
           />
         </div>

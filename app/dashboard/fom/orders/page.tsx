@@ -52,8 +52,10 @@ export default function FOMOrdersPage() {
   const [merchantOptions, setMerchantOptions] = useState<string[]>([]);
   // Pause realtime while the user is editing a row, searching or filtering
   const [realtimePaused, setRealtimePaused] = useState(false);
-  const [dataLimit, setDataLimit] = useState(100);
+  const [page, setPage] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [totalCount, setTotalCount] = useState<number | null>(null);
+  const PAGE_SIZE = 100;
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
 
@@ -139,7 +141,7 @@ export default function FOMOrdersPage() {
             .eq("fom_assigned", user.uid)
             .or("status.eq.fom, status.eq.accounting");
           if (filterMerchant) q = q.eq("merchant", filterMerchant);
-          return q.order("created_at", { ascending: false }).limit(dataLimit);
+          return q.order("created_at", { ascending: false }).range(0, PAGE_SIZE - 1);
         })(),
         supabase!
           .from("merchants")
@@ -177,7 +179,7 @@ export default function FOMOrdersPage() {
     } finally {
       setLoading(false);
     }
-  }, [user?.uid, dataLimit, startDate, endDate, filterMerchant]);
+  }, [user?.uid, startDate, endDate, filterMerchant]);
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -697,8 +699,25 @@ export default function FOMOrdersPage() {
             showActions
             renderRowActions={renderRowActions}
             onUserActivityChange={setRealtimePaused}
-            dataLimit={dataLimit}
-            onDataLimitChange={setDataLimit}
+            onLoadMore={async () => {
+              const nextPage = page + 1;
+              setLoadingMore(true);
+              const from = nextPage * PAGE_SIZE;
+              const to = from + PAGE_SIZE - 1;
+              let q = supabase!.from("orders")
+                .select("id, created_at, fom_assigned_at, customer_name, delivery_address, items, total_amount, rider_name, landmark, rider_assigned_at, payment_to_rider, fom_delivery_status, payment_method, bank, quantity_delivered, amount_paid, fom_comment, fom_assigned, status, merchant, payment_to_merchant, delivered_at")
+                .eq("fom_assigned", user!.uid)
+                .or("status.eq.fom, status.eq.accounting")
+                .order("created_at", { ascending: false })
+                .range(from, to);
+              if (filterMerchant) q = q.eq("merchant", filterMerchant);
+              if (startDate) q = q.gte("created_at", `${startDate}T00:00:00Z`);
+              if (endDate) q = q.lte("created_at", `${endDate}T23:59:59Z`);
+              const { data } = await q;
+              if (data) { setOrders(prev => [...prev, ...data as Order[]]); setPage(nextPage); }
+              setLoadingMore(false);
+            }}
+            loadingMore={loadingMore}
             totalCount={totalCount ?? undefined}
           />
         )}

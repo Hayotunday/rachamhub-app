@@ -11,8 +11,6 @@ interface Props {
   merchantOptions?: string[];
   filterMerchant?: string | null;
   onFilterMerchantChange?: (v: string | null) => void;
-  dataLimit?: number;
-  onDataLimitChange?: (limit: number) => void;
   placeholder?: string;
   secondaryPlaceholder?: string;
   title?: string;
@@ -28,8 +26,6 @@ export default function OrderSearchFilter({
   merchantOptions = [],
   filterMerchant,
   onFilterMerchantChange,
-  dataLimit,
-  onDataLimitChange,
   placeholder = "Search by customer, address, order id or merchant",
   secondaryPlaceholder = "Additional search...",
   title = "Search & Filter",
@@ -102,21 +98,6 @@ export default function OrderSearchFilter({
               {m}
             </option>
           ))}
-        </select>
-      )}
-      {dataLimit !== undefined && onDataLimitChange && (
-        <select
-          value={dataLimit}
-          onChange={(e) => onDataLimitChange(Number(e.target.value))}
-          className="rounded-md border border-input px-3 py-2 text-sm"
-          title="Data Limit"
-        >
-          <option value={50}>50 rows</option>
-          <option value={100}>100 rows</option>
-          <option value={250}>250 rows</option>
-          <option value={500}>500 rows</option>
-          <option value={1000}>1000 rows</option>
-          <option value={2000}>2000 rows</option>
         </select>
       )}
       {onRealtimeToggle && (

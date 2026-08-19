@@ -27,8 +27,10 @@ export default function InvoicesPage() {
   >({});
   // Pause realtime while the user is searching or filtering
   const [realtimePaused, setRealtimePaused] = useState(false);
-  const [dataLimit, setDataLimit] = useState(100);
+  const [page, setPage] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [totalCount, setTotalCount] = useState<number | null>(null);
+  const PAGE_SIZE = 100;
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
 
@@ -111,7 +113,7 @@ export default function InvoicesPage() {
             .eq("status", "fom")
             .neq("rider_name", null);
           if (filterMerchant) q = q.eq("merchant", filterMerchant);
-          return q.order("created_at", { ascending: false }).limit(dataLimit);
+          return q.order("created_at", { ascending: false }).range(0, PAGE_SIZE - 1);
         })(),
         supabase!
           .from("merchants")
@@ -135,7 +137,7 @@ export default function InvoicesPage() {
     } finally {
       setLoading(false);
     }
-  }, [dataLimit, startDate, endDate, filterMerchant]);
+  }, [startDate, endDate, filterMerchant]);
 
   useEffect(() => {
     fetchData();
@@ -525,8 +527,25 @@ export default function InvoicesPage() {
             onFilterMerchantChange={setFilterMerchant}
             searchPlaceholder="Search invoices..."
             onUserActivityChange={setRealtimePaused}
-            dataLimit={dataLimit}
-            onDataLimitChange={setDataLimit}
+            onLoadMore={async () => {
+              const nextPage = page + 1;
+              setLoadingMore(true);
+              const from = nextPage * PAGE_SIZE;
+              const to = from + PAGE_SIZE - 1;
+              let q = supabase!.from("orders")
+                .select("id, created_at, rider_assigned_at, delivered_at, customer_name, items, fom_assigned, amount_paid, total_amount, quantity_delivered, merchant, payment_to_merchant, landmark, rider_name, payment_to_rider, payment_method, bank, fom_comment, payment_confirmed, status")
+                .eq("status", "fom")
+                .neq("rider_name", null)
+                .order("created_at", { ascending: false })
+                .range(from, to);
+              if (filterMerchant) q = q.eq("merchant", filterMerchant);
+              if (startDate) q = q.gte("created_at", `${startDate}T00:00:00Z`);
+              if (endDate) q = q.lte("created_at", `${endDate}T23:59:59Z`);
+              const { data } = await q;
+              if (data) { setOrders(prev => [...prev, ...data as Order[]]); setPage(nextPage); }
+              setLoadingMore(false);
+            }}
+            loadingMore={loadingMore}
             totalCount={totalCount ?? undefined}
           />
         </Card>

@@ -15,6 +15,8 @@ interface ProgressEntry {
   totalFailed: number;
 }
 
+const ORDERS_LIMIT = 5000;
+
 export default function ProgressReportPage() {
   const [merchants, setMerchants] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
@@ -33,7 +35,7 @@ export default function ProgressReportPage() {
         await Promise.all([
           supabase!.from("merchants").select("id, name").eq("is_active", true).order("name"),
           supabase!.from("products").select("id, name, merchant_id").order("name"),
-          supabase!.from("orders").select("id, created_at, items, status, fom_delivery_status").order("created_at", { ascending: false }).limit(10000),
+          supabase!.from("orders").select("id, created_at, items, status, fom_delivery_status").order("created_at", { ascending: false }).range(0, ORDERS_LIMIT - 1),
         ]);
       if (merchantData) setMerchants(merchantData);
       if (productData) setProducts(productData);
