@@ -137,55 +137,6 @@ export default function InventoryPage() {
         getSearchableText: (row) => (row.merchant as any) || "",
       },
       {
-        key: "fom_delivery_status",
-        label: "FOM Del. Status",
-        render: (row) => (
-          <span
-            className={cn(
-              "px-2 py-0.5 rounded-full text-[10px] font-medium uppercase whitespace-nowrap",
-              STATUS_STYLES[(row.fom_delivery_status as any) || "pending"],
-            )}
-          >
-            {(row.fom_delivery_status as any) || "pending"}
-          </span>
-        ),
-        getSearchableText: (row) => (row.fom_delivery_status as any) || "",
-      },
-      {
-        key: "inventory_status",
-        label: "Inventory Del. Status",
-        render: (row) =>
-          editingId === String(row.id) ? (
-            <select
-              className="h-8 w-full rounded-md border border-input bg-background px-2 text-[11px]"
-              value={(editForm as any)?.inventory_status || ""}
-              onChange={(e) =>
-                setEditForm((prev) =>
-                  prev ? { ...prev, inventory_status: e.target.value as any } : prev,
-                )
-              }
-            >
-              <option value="">Select status</option>
-              <option value="pending">Pending</option>
-              <option value="delivered">Delivered</option>
-              <option value="returned">Returned</option>
-              <option value="failed">Failed</option>
-              <option value="canceled">Canceled</option>
-              <option value="shelved">Shelved</option>
-            </select>
-          ) : (
-            <span
-              className={cn(
-                "px-2 py-0.5 rounded-full text-[10px] font-medium uppercase whitespace-nowrap",
-                STATUS_STYLES[(row.inventory_status as any) || "pending"],
-              )}
-            >
-              {(row.inventory_status as any) || "pending"}
-            </span>
-          ),
-        getSearchableText: (row) => (row.inventory_status as any) || "pending",
-      },
-      {
         key: "warehouse_status",
         label: "Warehouse Status",
         render: (row) => {
@@ -257,6 +208,55 @@ export default function InventoryPage() {
         getSearchableText: (row) =>
           fomUsers.find((user) => user.id === (row as any).fom_assigned)
             ?.display_name || "",
+      },
+      {
+        key: "fom_delivery_status",
+        label: "FOM Del. Status",
+        render: (row) => (
+          <span
+            className={cn(
+              "px-2 py-0.5 rounded-full text-[10px] font-medium uppercase whitespace-nowrap",
+              STATUS_STYLES[(row.fom_delivery_status as any) || "pending"],
+            )}
+          >
+            {(row.fom_delivery_status as any) || "pending"}
+          </span>
+        ),
+        getSearchableText: (row) => (row.fom_delivery_status as any) || "",
+      },
+      {
+        key: "inventory_status",
+        label: "Inventory Del. Status",
+        render: (row) =>
+          editingId === String(row.id) ? (
+            <select
+              className="h-8 w-full rounded-md border border-input bg-background px-2 text-[11px]"
+              value={(editForm as any)?.inventory_status || ""}
+              onChange={(e) =>
+                setEditForm((prev) =>
+                  prev ? { ...prev, inventory_status: e.target.value as any } : prev,
+                )
+              }
+            >
+              <option value="">Select status</option>
+              <option value="pending">Pending</option>
+              <option value="delivered">Delivered</option>
+              <option value="returned">Returned</option>
+              <option value="failed">Failed</option>
+              <option value="canceled">Canceled</option>
+              <option value="shelved">Shelved</option>
+            </select>
+          ) : (
+            <span
+              className={cn(
+                "px-2 py-0.5 rounded-full text-[10px] font-medium uppercase whitespace-nowrap",
+                STATUS_STYLES[(row.inventory_status as any) || "pending"],
+              )}
+            >
+              {(row.inventory_status as any) || "pending"}
+            </span>
+          ),
+        getSearchableText: (row) => (row.inventory_status as any) || "pending",
       },
       {
         key: "warehouse_comment",
@@ -659,24 +659,24 @@ export default function InventoryPage() {
             renderRowActions={renderRowActions}
             onUserActivityChange={setRealtimePaused}
             onLoadMore={async () => {
-                const nextPage = page + 1;
-                setLoadingMore(true);
-                const from = nextPage * PAGE_SIZE;
-                const to = from + PAGE_SIZE - 1;
-                let q = supabase!.from("orders").select("id, created_at, customer_name, delivery_address, phone_numbers, merchant, items, fom_delivery_status, inventory_status, warehouse_status, fom_assigned, warehouse_comment, cc_comment, status, rider_name")
-                  .neq("warehouse_status", "out-of-stock")
-                  .neq("status", "customer_service")
-                  .not("fom_assigned", "is", null)
-                  .order("created_at", { ascending: false })
-                  .range(from, to);
-                if (filterMerchant) q = q.eq("merchant", filterMerchant);
-                if (startDate) q = q.gte("created_at", `${startDate}T00:00:00Z`);
-                if (endDate) q = q.lte("created_at", `${endDate}T23:59:59Z`);
-                const { data } = await q;
-                if (data) { setOrders(prev => [...prev, ...data as Order[]]); setPage(nextPage); }
-                setLoadingMore(false);
-              }}
-              loadingMore={loadingMore}
+              const nextPage = page + 1;
+              setLoadingMore(true);
+              const from = nextPage * PAGE_SIZE;
+              const to = from + PAGE_SIZE - 1;
+              let q = supabase!.from("orders").select("id, created_at, customer_name, delivery_address, phone_numbers, merchant, items, fom_delivery_status, inventory_status, warehouse_status, fom_assigned, warehouse_comment, cc_comment, status, rider_name")
+                .neq("warehouse_status", "out-of-stock")
+                .neq("status", "customer_service")
+                .not("fom_assigned", "is", null)
+                .order("created_at", { ascending: false })
+                .range(from, to);
+              if (filterMerchant) q = q.eq("merchant", filterMerchant);
+              if (startDate) q = q.gte("created_at", `${startDate}T00:00:00Z`);
+              if (endDate) q = q.lte("created_at", `${endDate}T23:59:59Z`);
+              const { data } = await q;
+              if (data) { setOrders(prev => [...prev, ...data as Order[]]); setPage(nextPage); }
+              setLoadingMore(false);
+            }}
+            loadingMore={loadingMore}
             totalCount={totalCount ?? undefined}
           />
         </div>

@@ -9,10 +9,19 @@ import { Download, Loader2 } from "lucide-react";
 import DataTable, { type DataTableColumn } from "@/components/data-table";
 import OrderSearchFilter from "@/components/order-search-filter";
 import { Button } from "@/components/ui/button";
-import { handleExport } from "@/lib/utils";
+import { cn, handleExport } from "@/lib/utils";
 import { ExportButton } from "@/components/export-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+
+const STATUS_STYLES: Record<string, string> = {
+  pending: "bg-purple-100 text-purple-900",
+  delivered: "bg-emerald-100 text-emerald-900",
+  returned: "bg-orange-100 text-orange-900",
+  failed: "bg-red-100 text-red-900",
+  canceled: "bg-slate-100 text-slate-900",
+  shelved: "bg-amber-100 text-amber-900",
+};
 
 export default function PaymentsPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -90,7 +99,7 @@ export default function PaymentsPage() {
     try {
       let ordersQuery = supabase!
         .from("orders")
-        .select("id, payment_verified_at, delivered_at, customer_name, fom_assigned, amount_paid, total_amount, quantity_delivered, merchant, payment_to_merchant, landmark, rider_name, payment_to_rider, bank, payment_method, fom_comment, created_at, payment_confirmed", { count: "exact" });
+        .select("id, payment_verified_at, delivered_at, inventory_status, fom_delivery_status, customer_name, fom_assigned, amount_paid, total_amount, quantity_delivered, merchant, payment_to_merchant, landmark, rider_name, payment_to_rider, bank, payment_method, fom_comment, created_at, payment_confirmed", { count: "exact" });
 
       if (startDate) {
         ordersQuery = ordersQuery.gte("created_at", `${startDate}T00:00:00Z`);
@@ -151,16 +160,16 @@ export default function PaymentsPage() {
       render: (row) =>
         (row.payment_verified_at as string)
           ? new Date(row.payment_verified_at as string).toLocaleString([], {
-              dateStyle: "short",
-              timeStyle: "short",
-            })
+            dateStyle: "short",
+            timeStyle: "short",
+          })
           : "—",
       getSearchableText: (row) =>
         (row.payment_verified_at as string)
           ? new Date(row.payment_verified_at as string).toLocaleString([], {
-              dateStyle: "short",
-              timeStyle: "short",
-            })
+            dateStyle: "short",
+            timeStyle: "short",
+          })
           : "—",
     },
     {
@@ -169,17 +178,47 @@ export default function PaymentsPage() {
       render: (row) =>
         (row as any).delivered_at
           ? new Date((row as any).delivered_at).toLocaleString([], {
-              dateStyle: "short",
-              timeStyle: "short",
-            })
+            dateStyle: "short",
+            timeStyle: "short",
+          })
           : "—",
       getSearchableText: (row) =>
         (row as any).delivered_at
           ? new Date((row as any).delivered_at).toLocaleString([], {
-              dateStyle: "short",
-              timeStyle: "short",
-            })
+            dateStyle: "short",
+            timeStyle: "short",
+          })
           : "",
+    },
+    {
+      key: "fom_delivery_status",
+      label: "FOM Del. Status",
+      render: (row) => (
+        <span
+          className={cn(
+            "px-2 py-0.5 rounded-full text-[10px] font-medium uppercase whitespace-nowrap",
+            STATUS_STYLES[(row.fom_delivery_status as any) || "pending"],
+          )}
+        >
+          {(row.fom_delivery_status as any) || "pending"}
+        </span>
+      ),
+      getSearchableText: (row) => (row.fom_delivery_status as any) || "",
+    },
+    {
+      key: "inventory_status",
+      label: "Inventory Del. Status",
+      render: (row) =>
+        <span
+          className={cn(
+            "px-2 py-0.5 rounded-full text-[10px] font-medium uppercase whitespace-nowrap",
+            STATUS_STYLES[(row.inventory_status as any) || "pending"],
+          )}
+        >
+          {(row.inventory_status as any) || "pending"}
+        </span>
+      ,
+      getSearchableText: (row) => (row.inventory_status as any) || "pending",
     },
     {
       key: "customer_name",
@@ -241,10 +280,9 @@ export default function PaymentsPage() {
       key: "landmark_price",
       label: "Landmark Price",
       render: (row) =>
-        `₦${
-          landmarks
-            .find((l) => l.name === (row as any).landmark)
-            ?.price?.toLocaleString() || "—"
+        `₦${landmarks
+          .find((l) => l.name === (row as any).landmark)
+          ?.price?.toLocaleString() || "—"
         }`,
       getSearchableText: (row) =>
         String(

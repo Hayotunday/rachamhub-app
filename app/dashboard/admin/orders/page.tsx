@@ -163,7 +163,7 @@ export default function AdminOrdersPage() {
       try {
         let query = supabase!
           .from("orders")
-          .select("id, created_at, customer_name, delivery_address, phone_numbers, merchant, items, total_amount, payment_to_rider, warehouse_status, inventory_status, fom_delivery_status, fom_assigned, rider_name, rider_assigned_at, payment_method, payment_confirmed, payment_verified_at, bank, landmark, warehouse_comment, cc_comment, fom_comment, updated_at", { count: "exact" });
+          .select("id, created_at, customer_name, delivery_address, phone_numbers, merchant, items, total_amount, payment_to_rider, warehouse_status, inventory_status, fom_delivery_status, fom_assigned, rider_name, rider_assigned_at, payment_method, payment_confirmed, payment_verified_at, bank, landmark, warehouse_comment, cc_comment, fom_comment, updated_at, extracted_by, amount_paid", { count: "exact" });
         if (filterMerchant) {
           query = query.eq("merchant", filterMerchant);
         }
@@ -704,9 +704,8 @@ export default function AdminOrdersPage() {
           );
         },
         getSearchableText: (row) =>
-          `${
-            fomUsers.find((u) => u.id === (row as any).fom_assigned)
-              ?.display_name
+          `${fomUsers.find((u) => u.id === (row as any).fom_assigned)
+            ?.display_name
           } ${(row as any).rider_name} ${new Date(
             (row as any).rider_assigned_at,
           ).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}`,
@@ -915,9 +914,8 @@ export default function AdminOrdersPage() {
           </div>
         ),
         getSearchableText: (row) =>
-          `${
-            ccUsers.find((u) => u.id === (row.extracted_by as any))
-              ?.display_name
+          `${ccUsers.find((u) => u.id === (row.extracted_by as any))
+            ?.display_name
           }`,
       },
     ],

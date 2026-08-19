@@ -11,6 +11,16 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
+
+const STATUS_STYLES: Record<string, string> = {
+  pending: "bg-purple-100 text-purple-900",
+  delivered: "bg-emerald-100 text-emerald-900",
+  returned: "bg-orange-100 text-orange-900",
+  failed: "bg-red-100 text-red-900",
+  canceled: "bg-slate-100 text-slate-900",
+  shelved: "bg-amber-100 text-amber-900",
+};
 
 export default function InvoicesPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -93,7 +103,7 @@ export default function InvoicesPage() {
     try {
       let ordersQuery = supabase!
         .from("orders")
-        .select("id, created_at, rider_assigned_at, delivered_at, customer_name, items, fom_assigned, amount_paid, total_amount, quantity_delivered, merchant, payment_to_merchant, landmark, rider_name, payment_to_rider, payment_method, bank, fom_comment, payment_confirmed, status", { count: "exact" });
+        .select("id, created_at, rider_assigned_at, delivered_at, inventory_status, fom_delivery_status, customer_name, items, fom_assigned, amount_paid, total_amount, quantity_delivered, merchant, payment_to_merchant, landmark, rider_name, payment_to_rider, payment_method, bank, fom_comment, payment_confirmed, status", { count: "exact" });
 
       if (startDate) {
         ordersQuery = ordersQuery.gte("created_at", `${startDate}T00:00:00Z`);
@@ -211,11 +221,11 @@ export default function InvoicesPage() {
       {
         key: "created_at",
         label: "Created At",
-        render: (row) => row.created_at as any,
-        // new Date(row.created_at as any).toLocaleString([], {
-        //   dateStyle: "short",
-        //   timeStyle: "short",
-        // }),
+        render: (row) =>
+          new Date(row.created_at as any).toLocaleString([], {
+            dateStyle: "short",
+            timeStyle: "short",
+          }),
         getSearchableText: (row) =>
           new Date(row.created_at as any).toLocaleString([], {
             dateStyle: "short",
@@ -242,17 +252,48 @@ export default function InvoicesPage() {
         render: (row) =>
           (row as any).delivered_at
             ? new Date((row as any).delivered_at).toLocaleString([], {
-                dateStyle: "short",
-                timeStyle: "short",
-              })
+              dateStyle: "short",
+              timeStyle: "short",
+            })
             : "—",
         getSearchableText: (row) =>
           (row as any).delivered_at
             ? new Date((row as any).delivered_at).toLocaleString([], {
-                dateStyle: "short",
-                timeStyle: "short",
-              })
+              dateStyle: "short",
+              timeStyle: "short",
+            })
             : "",
+      },
+      {
+        key: "fom_delivery_status",
+        label: "FOM Del. Status",
+        render: (row) => (
+          <span
+            className={cn(
+              "px-2 py-0.5 rounded-full text-[10px] font-medium uppercase whitespace-nowrap",
+              STATUS_STYLES[(row.fom_delivery_status as any) || "pending"],
+            )}
+          >
+            {(row.fom_delivery_status as any) || "pending"}
+          </span>
+        ),
+        getSearchableText: (row) => (row.fom_delivery_status as any) || "",
+      },
+      {
+        key: "inventory_status",
+        label: "Inventory Del. Status",
+        render: (row) =>
+
+          <span
+            className={cn(
+              "px-2 py-0.5 rounded-full text-[10px] font-medium uppercase whitespace-nowrap",
+              STATUS_STYLES[(row.inventory_status as any) || "pending"],
+            )}
+          >
+            {(row.inventory_status as any) || "pending"}
+          </span>
+        ,
+        getSearchableText: (row) => (row.inventory_status as any) || "pending",
       },
       {
         key: "customer_name",
@@ -340,15 +381,14 @@ export default function InvoicesPage() {
         key: "landmark_price",
         label: "Landmark Price",
         render: (row) =>
-          `₦${
-            landmarks
-              .find((l) => l.name === (row as any).landmark)
-              ?.price?.toLocaleString() || "—"
+          `₦${landmarks
+            .find((l) => l.name === (row as any).landmark)
+            ?.price?.toLocaleString() || "—"
           }`,
         getSearchableText: (row) =>
           String(
             landmarks.find((l) => l.name === (row as any).landmark)?.price ||
-              "",
+            "",
           ),
       },
       {
