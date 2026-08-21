@@ -126,7 +126,7 @@ export default function WarehouseOrdersPage() {
     try {
       let ordersQuery = supabase!
         .from("orders")
-        .select("id, created_at, customer_name, delivery_address, phone_numbers, merchant, items, total_amount, warehouse_status, inventory_status, fom_assigned, warehouse_comment, extracted_by, status", { count: "exact" });
+        .select("id, created_at, customer_name, delivery_address, phone_numbers, merchant, items, total_amount, warehouse_status, inventory_status, fom_assigned, warehouse_comment, extracted_by, status, prints", { count: "exact" });
 
       if (startDate) {
         ordersQuery = ordersQuery.gte("created_at", `${startDate}T00:00:00Z`);
@@ -464,6 +464,7 @@ export default function WarehouseOrdersPage() {
                 fom_assigned: validFomId,
                 fom_assigned_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
+                prints: (editForm.prints || 0) + 1,
               },
         )
         .eq("id", editForm.id);
@@ -655,7 +656,7 @@ export default function WarehouseOrdersPage() {
                 setLoadingMore(true);
                 const from = nextPage * PAGE_SIZE;
                 const to = from + PAGE_SIZE - 1;
-                let q = supabase!.from("orders").select("id, created_at, customer_name, delivery_address, phone_numbers, merchant, items, total_amount, warehouse_status, inventory_status, fom_assigned, warehouse_comment, extracted_by, status")
+                let q = supabase!.from("orders").select("id, created_at, customer_name, delivery_address, phone_numbers, merchant, items, total_amount, warehouse_status, inventory_status, fom_assigned, warehouse_comment, extracted_by, status, prints")
                   .neq("warehouse_status", "out-of-stock")
                   .or("status.eq.customer_service,fom_assigned.is.null")
                   .order("created_at", { ascending: false })

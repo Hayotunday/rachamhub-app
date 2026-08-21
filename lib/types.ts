@@ -75,6 +75,7 @@ export interface Order {
   delivered_at: string;
   quantity_delivered: number | null;
   amount_paid: number | null;
+  prints: number;
 }
 
 export interface OrderItem {

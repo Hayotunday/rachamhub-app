@@ -4,10 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSupabaseRealtime } from "@/hooks/use-supabase-realtime";
 import { supabase } from "@/lib/supabase";
 import { Card } from "@/components/ui/card";
-import { Check, Download, Edit2, Loader2, X } from "lucide-react";
+import { Check, Download, Edit2, Loader2, X, Printer } from "lucide-react";
 import { Order } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { cn, handleExport } from "@/lib/utils";
+import { cn, handleExport, printTicket } from "@/lib/utils";
 import { ExportButton } from "@/components/export-button";
 import DataTable, { type DataTableColumn } from "@/components/data-table";
 import {
@@ -60,6 +60,9 @@ export default function InventoryPage() {
   const PAGE_SIZE = 100;
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
+  const [printModalOpen, setPrintModalOpen] = useState(false);
+  const [orderToPrint, setOrderToPrint] = useState<Order | null>(null);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   const startEditing = useCallback((order: Order) => {
     setEditingId(order.id);
@@ -366,7 +369,7 @@ export default function InventoryPage() {
     try {
       let ordersQuery = supabase!
         .from("orders")
-        .select("id, created_at, customer_name, delivery_address, phone_numbers, merchant, items, fom_delivery_status, inventory_status, warehouse_status, fom_assigned, warehouse_comment, cc_comment, status, rider_name", { count: "exact" });
+        .select("id, created_at, customer_name, delivery_address, phone_numbers, merchant, items, fom_delivery_status, inventory_status, warehouse_status, fom_assigned, warehouse_comment, cc_comment, status, rider_name, prints", { count: "exact" });
 
       if (startDate) {
         ordersQuery = ordersQuery.gte("created_at", `${startDate}T00:00:00Z`);
@@ -492,6 +495,38 @@ export default function InventoryPage() {
     }
   }, [editForm, orders, verifyWarehouseAccessKey, warehouseKeyModalOpen]);
 
+  const handlePrint = async () => {
+    if (!orderToPrint) return;
+    if (!user?.uid || !warehouseAccessKey.trim()) return;
+
+    setIsPrinting(true);
+    try {
+      const isValidKey = await verifyWarehouseAccessKey();
+      if (!isValidKey) {
+        toast.error("Invalid warehouse access key.");
+        setIsPrinting(false);
+        return;
+      }
+
+      const newPrintsCount = (orderToPrint.prints || 0) + 1;
+      const { error: updateError } = await supabase!
+        .from("orders")
+        .update({ prints: newPrintsCount })
+        .eq("id", orderToPrint.id);
+
+      if (updateError) throw updateError;
+      
+      printTicket({ ...orderToPrint, prints: newPrintsCount });
+      setPrintModalOpen(false);
+      setOrderToPrint(null);
+      setWarehouseAccessKey("");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to print ticket.");
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
   useSupabaseRealtime(
     [{ table: "orders", event: "*" }],
     fetchOrders,
@@ -559,13 +594,26 @@ export default function InventoryPage() {
               </Button>
             </>
           ) : (
-            <Button
-              size="icon-sm"
-              variant="ghost"
-              onClick={() => startEditing(row as unknown as Order)}
-            >
-              <Edit2 className="h-4 w-4" />
-            </Button>
+            <>
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                onClick={() => {
+                  setOrderToPrint(row as unknown as Order);
+                  setPrintModalOpen(true);
+                }}
+                title="Print Ticket"
+              >
+                <Printer className="h-4 w-4" />
+              </Button>
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                onClick={() => startEditing(row as unknown as Order)}
+              >
+                <Edit2 className="h-4 w-4" />
+              </Button>
+            </>
           )}
         </div>
       );
@@ -663,7 +711,7 @@ export default function InventoryPage() {
               setLoadingMore(true);
               const from = nextPage * PAGE_SIZE;
               const to = from + PAGE_SIZE - 1;
-              let q = supabase!.from("orders").select("id, created_at, customer_name, delivery_address, phone_numbers, merchant, items, fom_delivery_status, inventory_status, warehouse_status, fom_assigned, warehouse_comment, cc_comment, status, rider_name")
+              let q = supabase!.from("orders").select("id, created_at, customer_name, delivery_address, phone_numbers, merchant, items, fom_delivery_status, inventory_status, warehouse_status, fom_assigned, warehouse_comment, cc_comment, status, rider_name, prints")
                 .neq("warehouse_status", "out-of-stock")
                 .neq("status", "customer_service")
                 .not("fom_assigned", "is", null)
@@ -741,6 +789,45 @@ export default function InventoryPage() {
               ) : null}
               Confirm
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={printModalOpen}
+        onOpenChange={setPrintModalOpen}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Warehouse Access Key Required to Print</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-3 py-4">
+            <Label htmlFor="print-access-key">Access Key</Label>
+            <Input
+              id="print-access-key"
+              type="password"
+              value={warehouseAccessKey}
+              onChange={(event) => setWarehouseAccessKey(event.target.value)}
+              placeholder="Enter warehouse merchant dashboard key"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+               variant="outline"
+               onClick={() => {
+                 setPrintModalOpen(false);
+                 setWarehouseAccessKey("");
+                 setOrderToPrint(null);
+               }}
+             >
+               Cancel
+             </Button>
+             <Button onClick={handlePrint} disabled={isPrinting}>
+               {isPrinting ? (
+                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+               ) : null}
+               Print Ticket
+             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
