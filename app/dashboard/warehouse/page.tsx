@@ -126,7 +126,7 @@ export default function WarehouseOrdersPage() {
     try {
       let ordersQuery = supabase!
         .from("orders")
-        .select("id, created_at, customer_name, delivery_address, phone_numbers, merchant, items, total_amount, warehouse_status, inventory_status, fom_assigned, warehouse_comment, extracted_by, status, prints", { count: "exact" });
+        .select("id, created_at, customer_name, delivery_address, phone_numbers, merchant, items, total_amount, warehouse_status, inventory_status, fom_assigned, warehouse_comment, cc_comment, extracted_by, status, prints", { count: "exact" });
 
       if (startDate) {
         ordersQuery = ordersQuery.gte("created_at", `${startDate}T00:00:00Z`);
@@ -325,13 +325,13 @@ export default function WarehouseOrdersPage() {
                 setEditForm((prev) =>
                   prev
                     ? {
-                        ...prev,
-                        warehouse_status: e.target.value as any,
-                        fom_assigned:
-                          e.target.value === "out-of-stock"
-                            ? ""
-                            : prev?.fom_assigned,
-                      }
+                      ...prev,
+                      warehouse_status: e.target.value as any,
+                      fom_assigned:
+                        e.target.value === "out-of-stock"
+                          ? ""
+                          : prev?.fom_assigned,
+                    }
                     : null,
                 )
               }
@@ -450,22 +450,22 @@ export default function WarehouseOrdersPage() {
         .update(
           warehouseStatus === "out-of-stock"
             ? {
-                status: "warehouse",
-                inventory_status: editForm.inventory_status?.toLowerCase(),
-                warehouse_status: warehouseStatus.toLowerCase(),
-                warehouse_comment: (editForm as any).warehouse_comment,
-                updated_at: new Date().toISOString(),
-              }
+              status: "warehouse",
+              inventory_status: editForm.inventory_status?.toLowerCase(),
+              warehouse_status: warehouseStatus.toLowerCase(),
+              warehouse_comment: (editForm as any).warehouse_comment,
+              updated_at: new Date().toISOString(),
+            }
             : {
-                status: "warehouse",
-                inventory_status: editForm.inventory_status?.toLowerCase(),
-                warehouse_status: warehouseStatus.toLowerCase(),
-                warehouse_comment: (editForm as any).warehouse_comment,
-                fom_assigned: validFomId,
-                fom_assigned_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-                prints: (editForm.prints || 0) + 1,
-              },
+              status: "warehouse",
+              inventory_status: editForm.inventory_status?.toLowerCase(),
+              warehouse_status: warehouseStatus.toLowerCase(),
+              warehouse_comment: (editForm as any).warehouse_comment,
+              fom_assigned: validFomId,
+              fom_assigned_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              prints: (editForm.prints || 0) + 1,
+            },
         )
         .eq("id", editForm.id);
 
