@@ -72,7 +72,7 @@ export default function WarehouseOrdersPage() {
   const fetchOrders = useCallback(async (payload?: any) => {
     if (payload && payload.eventType) {
       const matchFilters = (order: Order) => {
-        const matchesStatus = order.warehouse_status !== "out-of-stock";
+        const matchesStatus = true;
         const matchesAssign = order.status === "customer_service" || !order.fom_assigned;
         const matchesMerchant = !filterMerchant || order.merchant === filterMerchant;
         const createdAt = new Date(order.created_at);
@@ -143,7 +143,6 @@ export default function WarehouseOrdersPage() {
       ] = await Promise.all([
         (() => {
           let q = ordersQuery
-            .neq("warehouse_status", "out-of-stock")
             .or("status.eq.customer_service,fom_assigned.is.null");
           if (filterMerchant) q = q.eq("merchant", filterMerchant);
           return q.order("created_at", { ascending: false }).range(0, PAGE_SIZE - 1);
@@ -657,7 +656,6 @@ export default function WarehouseOrdersPage() {
                 const from = nextPage * PAGE_SIZE;
                 const to = from + PAGE_SIZE - 1;
                 let q = supabase!.from("orders").select("id, created_at, customer_name, delivery_address, phone_numbers, merchant, items, total_amount, warehouse_status, inventory_status, fom_assigned, warehouse_comment, extracted_by, status, prints")
-                  .neq("warehouse_status", "out-of-stock")
                   .or("status.eq.customer_service,fom_assigned.is.null")
                   .order("created_at", { ascending: false })
                   .range(from, to);

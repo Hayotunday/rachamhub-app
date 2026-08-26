@@ -139,7 +139,7 @@ export default function FOMOrdersPage() {
         (() => {
           let q = ordersQuery
             .eq("fom_assigned", user.uid)
-            .or("status.eq.fom, status.eq.accounting");
+            .or("status.eq.fom,status.eq.accounting");
           if (filterMerchant) q = q.eq("merchant", filterMerchant);
           return q.order("created_at", { ascending: false }).range(0, PAGE_SIZE - 1);
         })(),
@@ -220,17 +220,25 @@ export default function FOMOrdersPage() {
       originalOrder?.fom_delivery_status?.toLowerCase() === "delivered" ||
       !!originalOrder?.delivered_at;
 
-    const isNewlyDelivered =
-      editForm.fom_delivery_status?.toLowerCase() === "delivered" &&
-      !wasAlreadyDelivered;
+    const finalStatuses = ["delivered", "failed", "returned", "canceled"];
+    const isNowFinal = finalStatuses.includes(editForm.fom_delivery_status?.toLowerCase() || "");
+    const wasAlreadyFinal = finalStatuses.includes(originalOrder?.fom_delivery_status?.toLowerCase() || "") || !!originalOrder?.delivered_at;
+
+    const isNewlyFinal = isNowFinal && !wasAlreadyFinal;
 
     const isNewlyFailed =
       editForm.fom_delivery_status?.toLowerCase() === "failed" &&
       originalOrder?.fom_delivery_status?.toLowerCase() !== "failed";
 
+    const isUnFailed =
+      editForm.fom_delivery_status?.toLowerCase() !== "failed" &&
+      originalOrder?.fom_delivery_status?.toLowerCase() === "failed";
+
     let paymentToRiderPayload = {};
     if (isNewlyFailed) {
       paymentToRiderPayload = { payment_to_rider: Number(originalOrder?.payment_to_rider || 0) / 2 };
+    } else if (isUnFailed) {
+      paymentToRiderPayload = { payment_to_rider: Number(originalOrder?.payment_to_rider || 0) * 2 };
     }
 
     setIsSaving(true);
@@ -249,7 +257,7 @@ export default function FOMOrdersPage() {
           payment_to_merchant: paymentToMerchant,
           updated_at: new Date().toISOString(),
           ...paymentToRiderPayload,
-          ...(isNewlyDelivered ? { delivered_at: new Date().toISOString() } : {}),
+          ...(isNewlyFinal ? { delivered_at: new Date().toISOString() } : {}),
         })
         .eq("id", editForm.id);
 
@@ -707,7 +715,7 @@ export default function FOMOrdersPage() {
               let q = supabase!.from("orders")
                 .select("id, created_at, fom_assigned_at, customer_name, delivery_address, items, total_amount, rider_name, landmark, rider_assigned_at, payment_to_rider, fom_delivery_status, payment_method, bank, quantity_delivered, amount_paid, fom_comment, fom_assigned, status, merchant, payment_to_merchant, delivered_at")
                 .eq("fom_assigned", user!.uid)
-                .or("status.eq.fom, status.eq.accounting")
+                .or("status.eq.fom,status.eq.accounting")
                 .order("created_at", { ascending: false })
                 .range(from, to);
               if (filterMerchant) q = q.eq("merchant", filterMerchant);

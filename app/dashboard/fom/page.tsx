@@ -259,7 +259,7 @@ export default function FOMDashboard() {
       const landmarkPrice = selectedLandmark
         ? Number(selectedLandmark.price)
         : 0;
-      const paymentByMerchant = 0; // Remains 0 until amount_paid is set
+      const paymentByMerchant = -landmarkPrice;
 
       try {
         const { error } = await supabase!

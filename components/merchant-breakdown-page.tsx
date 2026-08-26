@@ -28,6 +28,7 @@ type BreakdownOrder = {
   landmark?: string | null;
   created_at: string;
   delivered_at?: string | null;
+  quantity_delivered?: number | null;
 };
 
 export default function MerchantBreakdownPage() {
@@ -119,7 +120,7 @@ export default function MerchantBreakdownPage() {
 
       const { data: deliveredOrders } = await supabase!
         .from("orders")
-        .select("items")
+        .select("items, quantity_delivered")
         .eq("merchant", selectedMerchant.name)
         .eq("fom_delivery_status", "delivered");
 
@@ -139,13 +140,26 @@ export default function MerchantBreakdownPage() {
       // Build deducted map
       const deductedMap: Record<string, number> = {};
       for (const o of deliveredOrders ?? []) {
-        for (const item of (o.items as any[]) ?? []) {
+        const items = (o.items as any[]) ?? [];
+        let remainingQty = (o.quantity_delivered !== null && o.quantity_delivered !== undefined)
+          ? Number(o.quantity_delivered)
+          : null;
+
+        for (const item of items) {
           const product = (productData ?? []).find(
             (p) => p.name?.toLowerCase() === item.name?.toLowerCase(),
           );
           if (product) {
-            deductedMap[product.id] =
-              (deductedMap[product.id] || 0) + (item.quantity || 1);
+            let deduction = Number(item.quantity || 1);
+            if (remainingQty !== null) {
+              if (remainingQty >= deduction) {
+                remainingQty -= deduction;
+              } else {
+                deduction = remainingQty;
+                remainingQty = 0;
+              }
+            }
+            deductedMap[product.id] = (deductedMap[product.id] || 0) + deduction;
           }
         }
       }
@@ -193,8 +207,21 @@ export default function MerchantBreakdownPage() {
         paragraphs.push(para(order.customer_name));
         paragraphs.push(para(landmarkLine));
 
+        let docRemainingQty = (order.quantity_delivered !== null && order.quantity_delivered !== undefined)
+          ? Number(order.quantity_delivered)
+          : null;
+
         for (const item of order.items ?? []) {
-          paragraphs.push(para(`${item.quantity} ${item.name}`));
+          let qty = Number(item.quantity || 1);
+          if (docRemainingQty !== null) {
+            if (docRemainingQty >= qty) {
+              docRemainingQty -= qty;
+            } else {
+              qty = docRemainingQty;
+              docRemainingQty = 0;
+            }
+          }
+          paragraphs.push(para(`${qty} ${item.name}`));
         }
         paragraphs.push(para(`Total = ${amount}`, true));
         paragraphs.push(blank());
@@ -470,13 +497,12 @@ export default function MerchantBreakdownPage() {
                     return (
                       <tr
                         key={order.id}
-                        className={`border-t border-border ${
-                          isFailed
+                        className={`border-t border-border ${isFailed
                             ? "bg-red-50"
                             : isDelivered
                               ? "bg-emerald-50/30"
                               : ""
-                        }`}
+                          }`}
                       >
                         <td className="p-3 font-medium">
                           {order.customer_name}
@@ -487,10 +513,12 @@ export default function MerchantBreakdownPage() {
                             .join(", ")}
                         </td>
                         <td className="p-3 text-center">
-                          {(order.items ?? []).reduce(
-                            (s, i) => s + Number(i.quantity || 0),
-                            0,
-                          )}
+                          {order.quantity_delivered !== null && order.quantity_delivered !== undefined
+                            ? order.quantity_delivered
+                            : (order.items ?? []).reduce(
+                              (s, i) => s + Number(i.quantity || 0),
+                              0,
+                            )}
                         </td>
                         <td className="p-3 text-xs">
                           {order.rider_name || "—"}
@@ -498,13 +526,12 @@ export default function MerchantBreakdownPage() {
                         <td className="p-3 text-xs">{order.landmark || "—"}</td>
                         <td className="p-3">
                           <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase ${
-                              isDelivered
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase ${isDelivered
                                 ? "bg-emerald-100 text-emerald-700"
                                 : isFailed
                                   ? "bg-red-100 text-red-700"
                                   : "bg-amber-100 text-amber-700"
-                            }`}
+                              }`}
                           >
                             {order.fom_delivery_status ||
                               order.inventory_status ||

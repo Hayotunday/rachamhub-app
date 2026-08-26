@@ -513,7 +513,6 @@ export default function InvoicesPage() {
               value={startDate}
               onChange={(event) => {
                 setStartDate(event.target.value);
-                console.log("start-date", event.target.value);
               }}
               className="w-full"
             />
@@ -525,7 +524,6 @@ export default function InvoicesPage() {
               value={endDate}
               onChange={(event) => {
                 setEndDate(event.target.value);
-                console.log("end-date", event.target.value);
               }}
               className="w-full"
             />
