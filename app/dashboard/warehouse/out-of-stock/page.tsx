@@ -331,17 +331,13 @@ export default function OutOfStockPage() {
   const handleSave = useCallback(async () => {
     if (!editForm) return;
 
+    const newStatus = (editForm as any).warehouse_status;
     const assignedFom = (editForm as any).fom_assigned;
-    const warehouseStatus =
-      (editForm as any).warehouse_status === "out-of-stock";
     const validFomId = fomUsers.find((u) => u.id === assignedFom)?.id || null;
 
-    setIsSaving(true);
-    setError(null);
-
-    // If warehouse_status is updated to packed or unpacked,
-    if (warehouseStatus) {
-      toast.error("Please select a product warehouse status before saving.");
+    // If they didn't actually change the status away from out-of-stock, block the save
+    if (newStatus === "out-of-stock") {
+      toast.error("Please change the warehouse status before saving.");
       return;
     }
     if (!validFomId) {
@@ -349,12 +345,15 @@ export default function OutOfStockPage() {
       return;
     }
 
+    setIsSaving(true);
+    setError(null);
+
     try {
       const { error: updateError } = await supabase!
         .from("orders")
         .update({
           status: "warehouse",
-          warehouse_status: editForm.warehouse_status?.toLowerCase(),
+          warehouse_status: newStatus.toLowerCase(),
           warehouse_comment: editForm.warehouse_comment,
           fom_assigned: validFomId,
           fom_assigned_at: new Date().toISOString(),
@@ -373,7 +372,7 @@ export default function OutOfStockPage() {
     } finally {
       setIsSaving(false);
     }
-  }, [editForm]);
+  }, [editForm, fomUsers]);
 
   useEffect(() => {
     fetchOrders();
@@ -408,9 +407,9 @@ export default function OutOfStockPage() {
     (row: any) => {
       const orderId = String(row.id);
       const isEditing = editingId === orderId;
-      const isSubmitDisabled =
+      const canSave =
         (editForm as any)?.warehouse_status !== "out-of-stock" &&
-        (editForm as any)?.fom_assigned !== "";
+        !!(editForm as any)?.fom_assigned;
       return (
         <div className="flex justify-end gap-1">
           {isEditing ? (
@@ -419,7 +418,7 @@ export default function OutOfStockPage() {
                 size="icon-sm"
                 variant="ghost"
                 onClick={handleSave}
-                disabled={isSaving || !isSubmitDisabled}
+                disabled={isSaving || !canSave}
               >
                 {isSaving ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
