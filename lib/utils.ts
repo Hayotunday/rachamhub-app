@@ -305,7 +305,7 @@ export const printTicket = (order: Order) => {
             </tbody>
           </table>
           
-          <div class="total">Total Amount: ₦${Number(order.total_amount).toLocaleString()}</div>
+          <div class="total">Total Amount: ₦${Number(order.total_amount || 0).toLocaleString()}</div>
           <div class="comment">Comment: ${order.cc_comment || "-"}</div>
         </div>
         <script>

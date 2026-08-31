@@ -11,6 +11,7 @@ import DataTable, { type DataTableColumn } from "@/components/data-table";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -411,9 +412,9 @@ export default function OrdersPage() {
                 setEditForm((prev) =>
                   prev
                     ? {
-                        ...prev,
-                        total_amount: Number(e.target.value),
-                      }
+                      ...prev,
+                      total_amount: Number(e.target.value),
+                    }
                     : null,
                 )
               }
@@ -710,6 +711,9 @@ export default function OrdersPage() {
             <DialogTitle className="capitalize">
               Edit {modalField?.replace("_", " ")}
             </DialogTitle>
+            <DialogDescription className="invisible">
+              {`Edit ${modalOpen ? `...` : ""} ${modalField} `}
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             {modalField === "merchant" ? (

@@ -264,7 +264,7 @@ export default function OutOfStockPage() {
     try {
       let ordersQuery = supabase!
         .from("orders")
-        .select("id, created_at, customer_name, delivery_address, merchant, items, warehouse_status, fom_assigned, warehouse_comment, status", { count: "exact" });
+        .select("id, created_at, customer_name, delivery_address, phone_numbers, merchant, items, total_amount, warehouse_status, fom_assigned, warehouse_comment, cc_comment, status, prints", { count: "exact" });
 
       if (startDate) {
         ordersQuery = ordersQuery.gte("created_at", `${startDate}T00:00:00Z`);
@@ -535,7 +535,7 @@ export default function OutOfStockPage() {
                 setLoadingMore(true);
                 const from = nextPage * PAGE_SIZE;
                 const to = from + PAGE_SIZE - 1;
-                let q = supabase!.from("orders").select("id, created_at, customer_name, delivery_address, merchant, items, warehouse_status, fom_assigned, warehouse_comment, status")
+                let q = supabase!.from("orders").select("id, created_at, customer_name, delivery_address, phone_numbers, merchant, items, total_amount, warehouse_status, fom_assigned, warehouse_comment, cc_comment, status, prints")
                   .eq("warehouse_status", "out-of-stock")
                   .neq("status", "customer_service")
                   .order("created_at", { ascending: false })

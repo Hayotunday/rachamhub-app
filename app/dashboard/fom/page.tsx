@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -236,9 +237,9 @@ export default function FOMDashboard() {
   const handleFomSubmit = useCallback(
     async (order: Order) => {
       const inputs = rowInputs[order.id] || {};
-      
-      const isReturnedOrCanceled = 
-        inputs.delivery_status === "returned" || 
+
+      const isReturnedOrCanceled =
+        inputs.delivery_status === "returned" ||
         inputs.delivery_status === "canceled";
 
       if (!isReturnedOrCanceled && (!inputs.rider_name || !inputs.payment_to_rider || !inputs.landmark)) {
@@ -523,9 +524,9 @@ export default function FOMDashboard() {
     (row: any) => {
       const orderId = String(row.id);
       const inputs = rowInputs[orderId] || {};
-      
-      const isReturnedOrCanceled = 
-        inputs.delivery_status === "returned" || 
+
+      const isReturnedOrCanceled =
+        inputs.delivery_status === "returned" ||
         inputs.delivery_status === "canceled";
 
       const isComplete = Boolean(
@@ -724,6 +725,9 @@ export default function FOMDashboard() {
         <DialogContent className="sm:max-w-131.25">
           <DialogHeader>
             <DialogTitle>Add Order Comment</DialogTitle>
+            <DialogDescription className="invisible">
+              {`...`}
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <Textarea

@@ -13,6 +13,7 @@ import DataTable, { type DataTableColumn } from "@/components/data-table";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -369,7 +370,7 @@ export default function InventoryPage() {
     try {
       let ordersQuery = supabase!
         .from("orders")
-        .select("id, created_at, customer_name, delivery_address, phone_numbers, merchant, items, fom_delivery_status, inventory_status, warehouse_status, fom_assigned, warehouse_comment, cc_comment, status, rider_name, prints", { count: "exact" });
+        .select("id, created_at, customer_name, delivery_address, phone_numbers, merchant, items, total_amount, fom_delivery_status, inventory_status, warehouse_status, fom_assigned, warehouse_comment, cc_comment, status, rider_name, prints", { count: "exact" });
 
       if (startDate) {
         ordersQuery = ordersQuery.gte("created_at", `${startDate}T00:00:00Z`);
@@ -515,7 +516,7 @@ export default function InventoryPage() {
         .eq("id", orderToPrint.id);
 
       if (updateError) throw updateError;
-      
+
       printTicket({ ...orderToPrint, prints: newPrintsCount });
       setPrintModalOpen(false);
       setOrderToPrint(null);
@@ -711,7 +712,7 @@ export default function InventoryPage() {
               setLoadingMore(true);
               const from = nextPage * PAGE_SIZE;
               const to = from + PAGE_SIZE - 1;
-              let q = supabase!.from("orders").select("id, created_at, customer_name, delivery_address, phone_numbers, merchant, items, fom_delivery_status, inventory_status, warehouse_status, fom_assigned, warehouse_comment, cc_comment, status, rider_name, prints")
+              let q = supabase!.from("orders").select("id, created_at, customer_name, delivery_address, phone_numbers, merchant, items, total_amount, fom_delivery_status, inventory_status, warehouse_status, fom_assigned, warehouse_comment, cc_comment, status, rider_name, prints")
                 .neq("warehouse_status", "out-of-stock")
                 .neq("status", "customer_service")
                 .not("fom_assigned", "is", null)
@@ -734,6 +735,9 @@ export default function InventoryPage() {
         <DialogContent className="sm:max-w-131.25">
           <DialogHeader>
             <DialogTitle>Edit Warehouse Comment</DialogTitle>
+            <DialogDescription className="invisible">
+              {`...`}
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <Textarea
@@ -813,21 +817,21 @@ export default function InventoryPage() {
           </div>
           <DialogFooter>
             <Button
-               variant="outline"
-               onClick={() => {
-                 setPrintModalOpen(false);
-                 setWarehouseAccessKey("");
-                 setOrderToPrint(null);
-               }}
-             >
-               Cancel
-             </Button>
-             <Button onClick={handlePrint} disabled={isPrinting}>
-               {isPrinting ? (
-                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-               ) : null}
-               Print Ticket
-             </Button>
+              variant="outline"
+              onClick={() => {
+                setPrintModalOpen(false);
+                setWarehouseAccessKey("");
+                setOrderToPrint(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handlePrint} disabled={isPrinting}>
+              {isPrinting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              Print Ticket
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
