@@ -26,46 +26,96 @@ export default function MerchantStockCountPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [{ data: merchantData }, { data: productData }, { data: approvedEntries }, { data: orderData }] =
-        await Promise.all([
-          supabase!.from("merchants").select("id, name").eq("approval_status", "approved").order("name"),
-          supabase!.from("products").select("id, name, price, merchant_id").eq("approval_status", "approved").order("name"),
-          supabase!
-            .from("stock_entries")
-            .select("product_id, quantity")
-            .eq("status", "approved"),
-          supabase!
-            .from("orders")
-            .select("items, fom_delivery_status, merchant")
-            .eq("fom_delivery_status", "delivered"),
-        ]);
+      const [merchantRes, productRes, stockRes, orderRes] = await Promise.all([
+        supabase!
+          .from("merchants")
+          .select("id, name, approval_status")
+          .order("name"),
+        supabase!
+          .from("products")
+          .select("id, name, price, merchant_id, approval_status")
+          .order("name"),
+        supabase!
+          .from("stock_entries")
+          .select("product_id, quantity, status, admin_approved, warehouse_approved"),
+        supabase!
+          .from("orders")
+          .select("items, fom_delivery_status, inventory_status, delivered_at, merchant")
+          .or("fom_delivery_status.ilike.delivered,delivered_at.not.is.null,inventory_status.ilike.delivered")
+          .range(0, 9999),
+      ]);
 
-      if (!merchantData || !productData) return;
+      if (merchantRes.error) console.error("Error loading merchants:", merchantRes.error);
+      if (productRes.error) console.error("Error loading products:", productRes.error);
+      if (stockRes.error) console.error("Error loading stock entries:", stockRes.error);
+      if (orderRes.error) console.error("Error loading orders:", orderRes.error);
+
+      // Include merchants that are approved or have null approval_status (legacy/seeded)
+      const rawMerchants = merchantRes.data || [];
+      const merchantData = rawMerchants.filter(
+        (m: any) => !m.approval_status || m.approval_status === "approved",
+      );
+
+      // Include products that are approved or have null approval_status
+      const rawProducts = productRes.data || [];
+      const productData = rawProducts.filter(
+        (p: any) => !p.approval_status || p.approval_status === "approved",
+      );
+
       setMerchants(merchantData);
 
       // Build stock map: product_id -> total added
+      // An entry counts if status is 'approved' or if approved by both admin and warehouse
       const addedMap: Record<string, number> = {};
-      for (const entry of approvedEntries || []) {
-        addedMap[entry.product_id] = (addedMap[entry.product_id] || 0) + entry.quantity;
+      for (const entry of stockRes.data || []) {
+        const isApproved =
+          entry.status === "approved" ||
+          (!!entry.admin_approved && !!entry.warehouse_approved);
+        if (isApproved && entry.product_id) {
+          addedMap[entry.product_id] =
+            (addedMap[entry.product_id] || 0) + (Number(entry.quantity) || 0);
+        }
       }
 
       // Build deduction map from delivered orders' items
       const deductedMap: Record<string, number> = {};
-      for (const order of orderData || []) {
-        const merchantName = order.merchant;
-        const merchant = merchantData.find((m: any) => m.name === merchantName);
+      for (const order of orderRes.data || []) {
+        if (!order.merchant) continue;
+        const merchantName = String(order.merchant).trim().toLowerCase();
+        const merchant = merchantData.find(
+          (m: any) => m.name && m.name.trim().toLowerCase() === merchantName,
+        );
         if (!merchant) continue;
 
-        for (const item of (order.items as any[]) || []) {
+        let items = order.items;
+        if (typeof items === "string") {
+          try {
+            items = JSON.parse(items);
+          } catch {
+            items = [];
+          }
+        }
+        if (!Array.isArray(items)) continue;
+
+        for (const item of items) {
+          if (!item || !item.name) continue;
+          const itemName = String(item.name).trim().toLowerCase();
+          const quantity = Number(item.quantity) || 1;
+
           // Try to find matching product by name for this merchant
-          const product = productData.find(
-            (p: any) =>
-              p.merchant_id === merchant.id &&
-              p.name?.toLowerCase() === item.name?.toLowerCase(),
-          );
+          const product = productData.find((p: any) => {
+            if (p.merchant_id !== merchant.id) return false;
+            const pName = String(p.name || "").trim().toLowerCase();
+            return (
+              pName === itemName ||
+              itemName.includes(pName) ||
+              pName.includes(itemName)
+            );
+          });
+
           if (product) {
             deductedMap[product.id] =
-              (deductedMap[product.id] || 0) + (item.quantity || 1);
+              (deductedMap[product.id] || 0) + quantity;
           }
         }
       }
@@ -89,6 +139,7 @@ export default function MerchantStockCountPage() {
 
       setData(stockItems);
     } catch (err) {
+      console.error("Failed to load stock count:", err);
       toast.error("Failed to load stock count");
     } finally {
       setLoading(false);

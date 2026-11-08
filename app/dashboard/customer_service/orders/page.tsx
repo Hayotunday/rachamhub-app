@@ -28,7 +28,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
-import { cn, handleExport } from "@/lib/utils";
+import { cn, handleExport, getLocalStartOfDayISO, getLocalEndOfDayISO } from "@/lib/utils";
 import { ExportButton } from "@/components/export-button";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -89,9 +89,12 @@ export default function OrdersPage() {
     if (payload && payload.eventType) {
       const matchFilters = (order: Order) => {
         const matchesMerchant = !filterMerchant || order.merchant === filterMerchant;
-        const createdAt = new Date(order.created_at);
-        const matchesStart = !startDate || createdAt >= new Date(`${startDate}T00:00:00Z`);
-        const matchesEnd = !endDate || createdAt <= new Date(`${endDate}T23:59:59Z`);
+        const targetVal = order.created_at;
+        const targetTime = targetVal ? new Date(targetVal).getTime() : 0;
+        const startBound = startDate ? new Date(getLocalStartOfDayISO(startDate)).getTime() : 0;
+        const endBound = endDate ? new Date(getLocalEndOfDayISO(endDate)).getTime() : Infinity;
+        const matchesStart = !startDate || targetTime >= startBound;
+        const matchesEnd = !endDate || targetTime <= endBound;
         return matchesMerchant && matchesStart && matchesEnd;
       };
 
@@ -104,20 +107,9 @@ export default function OrdersPage() {
           setTotalCount((c) => (c !== null ? c + 1 : 1));
         }
       } else if (payload.eventType === "UPDATE") {
-        if (matchFilters(payload.new)) {
-          setOrders((prev) =>
-            prev.map((o) => (o.id === payload.new.id ? payload.new : o))
-          );
-        } else {
-          setOrders((prev) => {
-            const exists = prev.some((o) => o.id === payload.new.id);
-            if (exists) {
-              setTotalCount((c) => (c !== null ? Math.max(0, c - 1) : 0));
-              return prev.filter((o) => o.id !== payload.new.id);
-            }
-            return prev;
-          });
-        }
+        setOrders((prev) =>
+          prev.map((o) => (o.id === payload.new.id ? payload.new : o)),
+        );
       } else if (payload.eventType === "DELETE") {
         setOrders((prev) => {
           const exists = prev.some((o) => o.id === payload.old.id);
@@ -150,10 +142,10 @@ export default function OrdersPage() {
         .select("id, created_at, customer_name, delivery_address, phone_numbers, merchant, items, total_amount, cc_comment, fom_delivery_status, extracted_by, status", { count: "exact" });
 
       if (startDate) {
-        ordersQuery = ordersQuery.gte("created_at", `${startDate}T00:00:00Z`);
+        ordersQuery = ordersQuery.gte("created_at", getLocalStartOfDayISO(startDate));
       }
       if (endDate) {
-        ordersQuery = ordersQuery.lte("created_at", `${endDate}T23:59:59Z`);
+        ordersQuery = ordersQuery.lte("created_at", getLocalEndOfDayISO(endDate));
       }
 
       const [
@@ -693,8 +685,8 @@ export default function OrdersPage() {
                 .order("created_at", { ascending: false })
                 .range(from, to);
               if (filterMerchant) q = q.eq("merchant", filterMerchant);
-              if (startDate) q = q.gte("created_at", `${startDate}T00:00:00Z`);
-              if (endDate) q = q.lte("created_at", `${endDate}T23:59:59Z`);
+              if (startDate) q = q.gte("created_at", getLocalStartOfDayISO(startDate));
+              if (endDate) q = q.lte("created_at", getLocalEndOfDayISO(endDate));
               const { data } = await q;
               if (data) { setOrders(prev => [...prev, ...data as Order[]]); setPage(nextPage); }
               setLoadingMore(false);

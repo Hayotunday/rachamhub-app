@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { Document, Packer, Paragraph, TextRun } from "docx";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, getLocalStartOfDayISO, getLocalEndOfDayISO } from "@/lib/utils";
 
 type Merchant = { id: string; name: string };
 
@@ -68,16 +68,15 @@ export default function MerchantBreakdownPage() {
 
     setOrdersLoading(true);
     try {
-      const start = new Date(`${breakdownDate}T05:00:00`);
-      const end = new Date(start);
-      end.setDate(end.getDate() + 1);
+      const startISO = getLocalStartOfDayISO(breakdownDate);
+      const endISO = getLocalEndOfDayISO(breakdownDate);
 
       const { data, error } = await supabase!
         .from("orders")
         .select("id, customer_name, merchant, items, amount_paid, total_amount, payment_to_merchant, payment_to_rider, fom_delivery_status, inventory_status, rider_name, landmark, created_at, delivered_at")
         .eq("merchant", merchant.name)
-        .gte("delivered_at", start.toISOString())
-        .lt("delivered_at", end.toISOString())
+        .gte("delivered_at", startISO)
+        .lte("delivered_at", endISO)
         .order("delivered_at", { ascending: false });
 
       if (error) throw error;

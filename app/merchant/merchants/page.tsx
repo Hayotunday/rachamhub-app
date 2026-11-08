@@ -118,8 +118,8 @@ export default function MerchantsProductsPage() {
     const userId = user?.id ?? null;
     return {
       approval_status: "pending",
-      admin_approved: role === "admin" ? userId : null,
-      warehouse_approved: role === "warehouse" ? userId : null,
+      admin_approved: role === "admin",
+      warehouse_approved: role === "warehouse",
       submitted_by: userId,
       submitted_by_role: role,
     };

@@ -27,6 +27,8 @@ import {
   formatCurrency,
   formatDateDisplay,
   handleExport,
+  getLocalStartOfDayISO,
+  getLocalEndOfDayISO,
 } from "@/lib/utils";
 import { ExportButton } from "@/components/export-button";
 
@@ -34,6 +36,7 @@ export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [dateField, setDateField] = useState<"created_at" | "fom_assigned_at" | "rider_assigned_at" | "payment_verified_at">("created_at");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -72,11 +75,12 @@ export default function AdminOrdersPage() {
       if (payload && payload.eventType) {
         const matchFilters = (order: Order) => {
           const matchesMerchant = !filterMerchant || order.merchant === filterMerchant;
-          const createdAt = new Date(order.created_at);
-          const matchesStart =
-            !startDate || createdAt >= new Date(`${startDate}T00:00:00Z`);
-          const matchesEnd =
-            !endDate || createdAt <= new Date(`${endDate}T23:59:59Z`);
+          const targetVal = (order as any)[dateField] || order.created_at;
+          const targetTime = targetVal ? new Date(targetVal).getTime() : 0;
+          const startBound = startDate ? new Date(getLocalStartOfDayISO(startDate)).getTime() : 0;
+          const endBound = endDate ? new Date(getLocalEndOfDayISO(endDate)).getTime() : Infinity;
+          const matchesStart = !startDate || targetTime >= startBound;
+          const matchesEnd = !endDate || targetTime <= endBound;
           return matchesMerchant && matchesStart && matchesEnd;
         };
 
@@ -89,20 +93,9 @@ export default function AdminOrdersPage() {
             setTotalCount((c) => (c !== null ? c + 1 : 1));
           }
         } else if (payload.eventType === "UPDATE") {
-          if (matchFilters(payload.new)) {
-            setOrders((prev) =>
-              prev.map((o) => (o.id === payload.new.id ? payload.new : o)),
-            );
-          } else {
-            setOrders((prev) => {
-              const exists = prev.some((o) => o.id === payload.new.id);
-              if (exists) {
-                setTotalCount((c) => (c !== null ? Math.max(0, c - 1) : 0));
-                return prev.filter((o) => o.id !== payload.new.id);
-              }
-              return prev;
-            });
-          }
+          setOrders((prev) =>
+            prev.map((o) => (o.id === payload.new.id ? payload.new : o)),
+          );
         } else if (payload.eventType === "DELETE") {
           setOrders((prev) => {
             const exists = prev.some((o) => o.id === payload.old.id);
@@ -167,12 +160,12 @@ export default function AdminOrdersPage() {
         if (filterMerchant) {
           query = query.eq("merchant", filterMerchant);
         }
-        query = query.order("created_at", { ascending: false });
+        query = query.order(dateField, { ascending: false, nullsFirst: false });
         if (startDate) {
-          query = query.gte("created_at", `${startDate}T00:00:00Z`);
+          query = query.gte(dateField, getLocalStartOfDayISO(startDate));
         }
         if (endDate) {
-          query = query.lte("created_at", `${endDate}T23:59:59Z`);
+          query = query.lte(dateField, getLocalEndOfDayISO(endDate));
         }
         const currentPage = 0;
         query = query.range(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE - 1);
@@ -188,7 +181,7 @@ export default function AdminOrdersPage() {
         setLoading(false);
       }
     },
-    [endDate, startDate, filterMerchant],
+    [endDate, startDate, filterMerchant, dateField],
   );
 
   useEffect(() => {
@@ -1065,7 +1058,20 @@ export default function AdminOrdersPage() {
       </div>
 
       <Card className="p-6">
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-4">
+          <div>
+            <Label>Date Field</Label>
+            <select
+              value={dateField}
+              onChange={(e) => setDateField(e.target.value as any)}
+              className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value="created_at">Created Date</option>
+              <option value="fom_assigned_at">FOM Assigned Date</option>
+              <option value="rider_assigned_at">Rider Assigned Date</option>
+              <option value="payment_verified_at">Payment Verified Date</option>
+            </select>
+          </div>
           <div>
             <Label>From</Label>
             <Input
@@ -1127,11 +1133,11 @@ export default function AdminOrdersPage() {
               const to = from + PAGE_SIZE - 1;
               let q = supabase!.from("orders")
                 .select("id, created_at, customer_name, delivery_address, phone_numbers, merchant, items, total_amount, payment_to_rider, warehouse_status, inventory_status, fom_delivery_status, fom_assigned, rider_name, rider_assigned_at, payment_method, payment_confirmed, payment_verified_at, bank, landmark, warehouse_comment, cc_comment, fom_comment, updated_at")
-                .order("created_at", { ascending: false })
+                .order(dateField, { ascending: false, nullsFirst: false })
                 .range(from, to);
               if (filterMerchant) q = q.eq("merchant", filterMerchant);
-              if (startDate) q = q.gte("created_at", `${startDate}T00:00:00Z`);
-              if (endDate) q = q.lte("created_at", `${endDate}T23:59:59Z`);
+              if (startDate) q = q.gte(dateField, getLocalStartOfDayISO(startDate));
+              if (endDate) q = q.lte(dateField, getLocalEndOfDayISO(endDate));
               const { data } = await q;
               if (data) { setOrders(prev => [...prev, ...data as Order[]]); setPage(nextPage); }
               setLoadingMore(false);

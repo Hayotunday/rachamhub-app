@@ -60,6 +60,11 @@ export default function MerchantApprovalsPage() {
   }, [fetchPendingItems]);
 
   const canApprove = (item: any) => {
+    if (activeTab === "stock" || item.product_id) {
+      if (role === "admin" && !item.admin_approved) return true;
+      if (role === "warehouse" && !item.warehouse_approved) return true;
+      return false;
+    }
     if (role === "admin" && !item.admin_approved) return true;
     if (role === "warehouse" && !item.warehouse_approved) return true;
     if (
@@ -77,14 +82,15 @@ export default function MerchantApprovalsPage() {
     const { data: { user } } = await supabase!.auth.getUser();
     const userId = user?.id ?? null;
 
-    const isNowAdminApproved = role === "admin" ? userId : item.admin_approved ?? null;
-    const isNowWarehouseApproved = role === "warehouse" ? userId : item.warehouse_approved ?? null;
+    const isNowAdminApproved = role === "admin" ? true : !!item.admin_approved;
+    const isNowWarehouseApproved = role === "warehouse" ? true : !!item.warehouse_approved;
     const isNowCustomerServiceApproved =
-      role === "customer_service" ? userId : item.customer_service_approved ?? null;
+      role === "customer_service" ? true : !!item.customer_service_approved;
+
     const isFullyApproved =
-      !!isNowAdminApproved &&
-      !!isNowWarehouseApproved &&
-      !!isNowCustomerServiceApproved;
+      table === "stock_entries"
+        ? isNowAdminApproved && isNowWarehouseApproved
+        : isNowAdminApproved && isNowWarehouseApproved && isNowCustomerServiceApproved;
 
     const updates: any = {
       admin_approved: isNowAdminApproved,
@@ -96,6 +102,7 @@ export default function MerchantApprovalsPage() {
       if (isFullyApproved) {
         updates.status = "approved";
         updates.approved_at = new Date().toISOString();
+        if (userId) updates.approved_by = userId;
       }
     } else {
       if (isFullyApproved) {

@@ -9,7 +9,7 @@ import { Download, Loader2 } from "lucide-react";
 import DataTable, { type DataTableColumn } from "@/components/data-table";
 import OrderSearchFilter from "@/components/order-search-filter";
 import { Button } from "@/components/ui/button";
-import { cn, handleExport } from "@/lib/utils";
+import { cn, handleExport, getLocalStartOfDayISO, getLocalEndOfDayISO } from "@/lib/utils";
 import { ExportButton } from "@/components/export-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,6 +38,7 @@ export default function PaymentsPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [totalCount, setTotalCount] = useState<number | null>(null);
   const PAGE_SIZE = 100;
+  const [dateField, setDateField] = useState<"payment_verified_at" | "delivered_at" | "created_at">("payment_verified_at");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
 
@@ -48,9 +49,12 @@ export default function PaymentsPage() {
       const matchFilters = (order: Order) => {
         const matchesStatus = order.payment_confirmed === true;
         const matchesMerchant = !filterMerchant || order.merchant === filterMerchant;
-        const createdAt = new Date(order.created_at);
-        const matchesStart = !startDate || createdAt >= new Date(`${startDate}T00:00:00Z`);
-        const matchesEnd = !endDate || createdAt <= new Date(`${endDate}T23:59:59Z`);
+        const targetVal = (order as any)[dateField] || order.created_at;
+        const targetTime = targetVal ? new Date(targetVal).getTime() : 0;
+        const startBound = startDate ? new Date(getLocalStartOfDayISO(startDate)).getTime() : 0;
+        const endBound = endDate ? new Date(getLocalEndOfDayISO(endDate)).getTime() : Infinity;
+        const matchesStart = !startDate || targetTime >= startBound;
+        const matchesEnd = !endDate || targetTime <= endBound;
         return matchesStatus && matchesMerchant && matchesStart && matchesEnd;
       };
 
@@ -63,20 +67,9 @@ export default function PaymentsPage() {
           setTotalCount((c) => (c !== null ? c + 1 : 1));
         }
       } else if (payload.eventType === "UPDATE") {
-        if (matchFilters(payload.new)) {
-          setOrders((prev) =>
-            prev.map((o) => (o.id === payload.new.id ? payload.new : o))
-          );
-        } else {
-          setOrders((prev) => {
-            const exists = prev.some((o) => o.id === payload.new.id);
-            if (exists) {
-              setTotalCount((c) => (c !== null ? Math.max(0, c - 1) : 0));
-              return prev.filter((o) => o.id !== payload.new.id);
-            }
-            return prev;
-          });
-        }
+        setOrders((prev) =>
+          prev.map((o) => (o.id === payload.new.id ? payload.new : o)),
+        );
       } else if (payload.eventType === "DELETE") {
         setOrders((prev) => {
           const exists = prev.some((o) => o.id === payload.old.id);
@@ -102,10 +95,10 @@ export default function PaymentsPage() {
         .select("id, payment_verified_at, delivered_at, inventory_status, fom_delivery_status, customer_name, fom_assigned, amount_paid, total_amount, quantity_delivered, merchant, payment_to_merchant, landmark, rider_name, payment_to_rider, bank, payment_method, fom_comment, created_at, payment_confirmed", { count: "exact" });
 
       if (startDate) {
-        ordersQuery = ordersQuery.gte("created_at", `${startDate}T00:00:00Z`);
+        ordersQuery = ordersQuery.gte(dateField, getLocalStartOfDayISO(startDate));
       }
       if (endDate) {
-        ordersQuery = ordersQuery.lte("created_at", `${endDate}T23:59:59Z`);
+        ordersQuery = ordersQuery.lte(dateField, getLocalEndOfDayISO(endDate));
       }
 
       const [
@@ -117,7 +110,7 @@ export default function PaymentsPage() {
         (() => {
           let q = ordersQuery.eq("payment_confirmed", true);
           if (filterMerchant) q = q.eq("merchant", filterMerchant);
-          return q.order("updated_at", { ascending: false }).range(0, PAGE_SIZE - 1);
+          return q.order(dateField, { ascending: false, nullsFirst: false }).range(0, PAGE_SIZE - 1);
         })(),
         supabase!.from("landmarks").select("*").eq("is_active", true),
         supabase!.from("users").select("id, display_name").eq("role", "fom"),
@@ -141,7 +134,7 @@ export default function PaymentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [startDate, endDate, filterMerchant]);
+  }, [startDate, endDate, filterMerchant, dateField]);
 
   useEffect(() => {
     fetchData();
@@ -362,7 +355,19 @@ export default function PaymentsPage() {
       </div>
 
       <Card className="p-6 mb-6">
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-4">
+          <div>
+            <Label>Date Field</Label>
+            <select
+              value={dateField}
+              onChange={(e) => setDateField(e.target.value as any)}
+              className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value="payment_verified_at">Verified Date</option>
+              <option value="delivered_at">Delivered Date</option>
+              <option value="created_at">Created Date</option>
+            </select>
+          </div>
           <div>
             <Label>From</Label>
             <Input
@@ -427,11 +432,11 @@ export default function PaymentsPage() {
               let q = supabase!.from("orders")
                 .select("id, payment_verified_at, delivered_at, customer_name, fom_assigned, amount_paid, total_amount, quantity_delivered, merchant, payment_to_merchant, landmark, rider_name, payment_to_rider, bank, payment_method, fom_comment, created_at, payment_confirmed")
                 .eq("payment_confirmed", true)
-                .order("updated_at", { ascending: false })
+                .order(dateField, { ascending: false, nullsFirst: false })
                 .range(from, to);
               if (filterMerchant) q = q.eq("merchant", filterMerchant);
-              if (startDate) q = q.gte("created_at", `${startDate}T00:00:00Z`);
-              if (endDate) q = q.lte("created_at", `${endDate}T23:59:59Z`);
+              if (startDate) q = q.gte(dateField, getLocalStartOfDayISO(startDate));
+              if (endDate) q = q.lte(dateField, getLocalEndOfDayISO(endDate));
               const { data } = await q;
               if (data) { setOrders(prev => [...prev, ...data as Order[]]); setPage(nextPage); }
               setLoadingMore(false);

@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Order } from "@/lib/types";
 import { Check, Loader2, X, Edit2, Download } from "lucide-react";
 import DataTable, { type DataTableColumn } from "@/components/data-table";
-import { cn, handleExport } from "@/lib/utils";
+import { cn, handleExport, getLocalStartOfDayISO, getLocalEndOfDayISO } from "@/lib/utils";
 import { ExportButton } from "@/components/export-button";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
@@ -56,6 +56,7 @@ export default function FOMOrdersPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [totalCount, setTotalCount] = useState<number | null>(null);
   const PAGE_SIZE = 100;
+  const [dateField, setDateField] = useState<"fom_assigned_at" | "created_at" | "delivered_at">("fom_assigned_at");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
 
@@ -69,9 +70,12 @@ export default function FOMOrdersPage() {
         const matchesFom = order.fom_assigned === user.uid;
         const matchesStatus = order.status === "fom" || order.status === "accounting";
         const matchesMerchant = !filterMerchant || order.merchant === filterMerchant;
-        const createdAt = new Date(order.created_at);
-        const matchesStart = !startDate || createdAt >= new Date(`${startDate}T00:00:00Z`);
-        const matchesEnd = !endDate || createdAt <= new Date(`${endDate}T23:59:59Z`);
+        const targetVal = (order as any)[dateField] || order.created_at;
+        const targetTime = targetVal ? new Date(targetVal).getTime() : 0;
+        const startBound = startDate ? new Date(getLocalStartOfDayISO(startDate)).getTime() : 0;
+        const endBound = endDate ? new Date(getLocalEndOfDayISO(endDate)).getTime() : Infinity;
+        const matchesStart = !startDate || targetTime >= startBound;
+        const matchesEnd = !endDate || targetTime <= endBound;
         return matchesFom && matchesStatus && matchesMerchant && matchesStart && matchesEnd;
       };
 
@@ -84,20 +88,9 @@ export default function FOMOrdersPage() {
           setTotalCount((c) => (c !== null ? c + 1 : 1));
         }
       } else if (payload.eventType === "UPDATE") {
-        if (matchFilters(payload.new)) {
-          setOrders((prev) =>
-            prev.map((o) => (o.id === payload.new.id ? payload.new : o))
-          );
-        } else {
-          setOrders((prev) => {
-            const exists = prev.some((o) => o.id === payload.new.id);
-            if (exists) {
-              setTotalCount((c) => (c !== null ? Math.max(0, c - 1) : 0));
-              return prev.filter((o) => o.id !== payload.new.id);
-            }
-            return prev;
-          });
-        }
+        setOrders((prev) =>
+          prev.map((o) => (o.id === payload.new.id ? payload.new : o)),
+        );
       } else if (payload.eventType === "DELETE") {
         setOrders((prev) => {
           const exists = prev.some((o) => o.id === payload.old.id);
@@ -123,10 +116,10 @@ export default function FOMOrdersPage() {
         .select("id, created_at, fom_assigned_at, customer_name, delivery_address, items, total_amount, rider_name, landmark, rider_assigned_at, payment_to_rider, fom_delivery_status, payment_method, bank, quantity_delivered, amount_paid, fom_comment, fom_assigned, status, merchant, payment_to_merchant, delivered_at", { count: "exact" });
 
       if (startDate) {
-        ordersQuery = ordersQuery.gte("created_at", `${startDate}T00:00:00Z`);
+        ordersQuery = ordersQuery.gte(dateField, getLocalStartOfDayISO(startDate));
       }
       if (endDate) {
-        ordersQuery = ordersQuery.lte("created_at", `${endDate}T23:59:59Z`);
+        ordersQuery = ordersQuery.lte(dateField, getLocalEndOfDayISO(endDate));
       }
 
       const [
@@ -141,7 +134,7 @@ export default function FOMOrdersPage() {
             .eq("fom_assigned", user.uid)
             .or("status.eq.fom,status.eq.accounting");
           if (filterMerchant) q = q.eq("merchant", filterMerchant);
-          return q.order("created_at", { ascending: false }).range(0, PAGE_SIZE - 1);
+          return q.order(dateField, { ascending: false, nullsFirst: false }).range(0, PAGE_SIZE - 1);
         })(),
         supabase!
           .from("merchants")
@@ -179,7 +172,7 @@ export default function FOMOrdersPage() {
     } finally {
       setLoading(false);
     }
-  }, [user?.uid, startDate, endDate, filterMerchant]);
+  }, [user?.uid, startDate, endDate, filterMerchant, dateField]);
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -634,7 +627,19 @@ export default function FOMOrdersPage() {
       </div>
 
       <Card className="p-6 mb-6">
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-4">
+          <div>
+            <Label>Date Field</Label>
+            <select
+              value={dateField}
+              onChange={(e) => setDateField(e.target.value as any)}
+              className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value="fom_assigned_at">Assigned Date</option>
+              <option value="created_at">Created Date</option>
+              <option value="delivered_at">Delivered Date</option>
+            </select>
+          </div>
           <div>
             <Label>From</Label>
             <Input
@@ -716,11 +721,11 @@ export default function FOMOrdersPage() {
                 .select("id, created_at, fom_assigned_at, customer_name, delivery_address, items, total_amount, rider_name, landmark, rider_assigned_at, payment_to_rider, fom_delivery_status, payment_method, bank, quantity_delivered, amount_paid, fom_comment, fom_assigned, status, merchant, payment_to_merchant, delivered_at")
                 .eq("fom_assigned", user!.uid)
                 .or("status.eq.fom,status.eq.accounting")
-                .order("created_at", { ascending: false })
+                .order(dateField, { ascending: false, nullsFirst: false })
                 .range(from, to);
               if (filterMerchant) q = q.eq("merchant", filterMerchant);
-              if (startDate) q = q.gte("created_at", `${startDate}T00:00:00Z`);
-              if (endDate) q = q.lte("created_at", `${endDate}T23:59:59Z`);
+              if (startDate) q = q.gte(dateField, getLocalStartOfDayISO(startDate));
+              if (endDate) q = q.lte(dateField, getLocalEndOfDayISO(endDate));
               const { data } = await q;
               if (data) { setOrders(prev => [...prev, ...data as Order[]]); setPage(nextPage); }
               setLoadingMore(false);

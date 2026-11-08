@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabase";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, getLocalStartOfDayISO, getLocalEndOfDayISO } from "@/lib/utils";
 
 const createSelectionId = () => Math.random().toString(36).slice(2);
 
@@ -80,16 +80,15 @@ export default function ProductBreakdownPage() {
   }, []);
 
   const fetchOrders = useCallback(async () => {
-    const start = new Date(`${breakdownDate}T00:00:00`);
-    const end = new Date(start);
-    end.setDate(end.getDate() + 1);
-
     try {
+      const startISO = getLocalStartOfDayISO(breakdownDate);
+      const endISO = getLocalEndOfDayISO(breakdownDate);
+
       const { data, error } = await supabase!
         .from("orders")
         .select("id, merchant, items, total_amount, payment_to_rider, fom_delivery_status, inventory_status, created_at, customer_name")
-        .gte("created_at", start.toISOString())
-        .lt("created_at", end.toISOString())
+        .gte("created_at", startISO)
+        .lte("created_at", endISO)
         .order("created_at", { ascending: false });
 
       if (error) throw error;

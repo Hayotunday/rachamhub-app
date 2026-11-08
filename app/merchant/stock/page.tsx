@@ -56,13 +56,11 @@ export default function MerchantStockPage() {
       ] = await Promise.all([
         supabase!
           .from("merchants")
-          .select("id, name")
-          .eq("approval_status", "approved")
+          .select("id, name, approval_status")
           .order("name"),
         supabase!
           .from("products")
-          .select("id, name, price, merchant_id")
-          .eq("approval_status", "approved")
+          .select("id, name, price, merchant_id, approval_status")
           .order("name"),
         supabase!
           .from("stock_entries")
@@ -71,8 +69,20 @@ export default function MerchantStockPage() {
           .limit(100),
       ]);
 
-      if (merchantData) setMerchants(merchantData);
-      if (productData) setProducts(productData);
+      if (merchantData) {
+        setMerchants(
+          merchantData.filter(
+            (m: any) => !m.approval_status || m.approval_status === "approved",
+          ),
+        );
+      }
+      if (productData) {
+        setProducts(
+          productData.filter(
+            (p: any) => !p.approval_status || p.approval_status === "approved",
+          ),
+        );
+      }
       if (entryData) setStockEntries(entryData);
     } catch (err) {
       toast.error("Failed to load stock data");
@@ -106,8 +116,8 @@ export default function MerchantStockPage() {
           status: "pending",
           submitted_by: userId,
           submitted_by_role: role,
-          admin_approved: role === "admin" ? userId : null,
-          warehouse_approved: role === "warehouse" ? userId : null,
+          admin_approved: role === "admin",
+          warehouse_approved: role === "warehouse",
         },
       ]);
       if (error) throw error;
